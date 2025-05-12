@@ -38,3 +38,25 @@ namespace RocketOS{
 static_assert(false, "Only 8, 16, 32 & 64 bit architectures are supported");
 #endif
 #endif
+
+/*error type
+ *
+ *
+ * 
+*/
+namespace RocketOS{
+    class error_t{
+    private:
+        uint_t m_code;
+
+    public:
+        error_t(uint_t);
+        operator bool() const;
+        operator uint_t() const;
+        bool operator==(const error_t&) const;
+        bool operator!=(const error_t&) const;
+
+        static error_t GOOD;
+        static error_t ERROR;
+    };
+}
