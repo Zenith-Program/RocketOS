@@ -4,10 +4,11 @@
 
 namespace RocketOS{
     namespace Shell{
-        /*Token Helper Structures------------------
-	* Description:
-	* These structures are used by the internals of Token and other Intrpreter classes to store incoming data from the console
-	* 
+
+    /*Token Helper Structures------------------
+	* StrPos - Sotres the start and end of the substring within the input buffer that corrisponds to the data assigned to the token by the interprter. 
+	* TokenData - Union that stores each of the supported token data types in the same block of memory. 
+	* Only one member of the union will be valid after interpretation so it is important that command callback functions extract the same data types as are in their argument list.
 	*/
 	struct StrPos {
 		int_t start;
@@ -22,14 +23,18 @@ namespace RocketOS{
 	
 
 	/*Token Class------------------------------
-	* Description:
-	* The token class is used when parsing commands sent to the OS. They first check what types they could be, and then based on the request of the current command store the type of data it expects.
-	* Commands recive an array of tokens as their argument that will be of the types they specify in their expected types string.
-	* 
-	* Members:
-	* data - stores the data for command arguments.
-	* interpretations - bitmask of the possible interpretations on the characters assigned to the token. used to check that arguments are valid before stroing token data
-	* buffer - static member that points to the console's incoming character buffer
+	 * Token objects are used by the interpreter to parse incomming commands from the user and to pass argument data to command callback functions.
+	 * Each substring of characters seperated by whitespace in a command is considered a seperate token.
+	 * 
+	 * There are 5 types of tokens:
+	 * unisgned number - whole number in decimal form (ex. 1, 46, etc), hexadecimal form (ex. 0xFA7b, 0x01, etc), or binary form (ex. 0b0100110, 0b001, etc).
+	 * signed number - integer number in decimal form (ex. 1, -5, etc).
+	 * floating point number - positive or negative number with an optional decimal point (ex. -5, 2.0, 5, 12.75, -16.39).
+	 * string data - string of characters enclosed in quotation marks that can include spaces (ex. "hello world", "2.575", etc).
+	 * word data - string of characters not containing whitespace, quotation marks, or the command character '>' (ex. hello, helloWorld, 2.75 0x000, etc)
+     * 
+	 * The command interpreter contains an array of tokens objects. Durring parsing, each token within the incoming string is assigned to a token within the array for interpretation.
+	 * Tokens which were assigned to the arguments of a command are passed as parameters to the command's callback function.
 	*/
 
 	enum class TokenTypes : uint_t {
@@ -37,13 +42,19 @@ namespace RocketOS{
 	};
 
 	class Token {
+		/*cass members
+		 * m_data - stores the data for command arguments.
+		 * m_interpretations - bitmask of the possible interpretations on the characters assigned to the token. used to check that arguments are valid before stroing token data
+		 * s_buffer - static member that points to the console's incoming character buffer
+		*/
 		TokenData m_data;
 		uint_t m_interpretations;
 		static SerialInput* s_buffer;
 	public:
 		/*Command Interface----------
-		* Description:
-		* Use these functions to get argument data from the token
+		 * Use these functions to get argument data from the token.
+		 * String data must be copied from the token to avoid it being overwrittn by the next command.
+		 * All other data types just return the value from the user.
 		*/
 		error_t copyStringData(char*, uint_t) const;
 		uint_t getUnsignedData() const;
@@ -51,8 +62,9 @@ namespace RocketOS{
 		float_t getFloatData() const;
 
 		/*Interpreter Interface------
-		* Description:
-		* These functions are used by Interpreter objects
+		 * These functions are used by the interpreter to deduce argument types and extract data.
+		 * If you dont mess with the interpreter, you dont have to worry about these.
+		 * 
 		*/
 		bool extract(int_t&);
 		bool hasInterpretation(TokenTypes) const;
@@ -61,8 +73,8 @@ namespace RocketOS{
 		
 	private:
 		/*Implementation details
-		* Description:
-		* These functions are used by token to decode incoming characters and save the argument data
+		* These functions are used by token to decode incoming characters and save the argument data.
+		* If you dont mess with the parsing algorithim, you dont have to worry about these.
 		*/
 		static bool isEndCharacter(char);
 		static bool isStopCharacter(char);
@@ -91,6 +103,11 @@ namespace RocketOS{
 		void checkFloatData();
 	};
 
+	/*arg_t alias
+	 * arg_t is a type alias for command callbacks to use.
+	 * An array of tokens is passed as a pointer to command callbacks to extract each their arguments from.
+	 * A single parameter of type arg_t should be used for all command callbacks regardless of how many arguments they have.
+	*/
 	using arg_t = const Token*;
     }
 }
