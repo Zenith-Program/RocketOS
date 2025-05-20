@@ -8,9 +8,11 @@ class SyncTest{
 public:
   Sync::SyncData<float_t> data1;
   Sync::SyncData<float_t> data2;
+  Sync::SyncData<float_t> data3;
 
   SyncTest(){
-    data1.bind(data2);
+    data2.bind(data3);
+    data1.bind(data3);
   }
 };
 
@@ -50,6 +52,12 @@ class Cl{
     Serial.println(t.data2);
   }
 
+  void C1_function5(Shell::arg_t){
+    Serial.println(t.data1);
+    Serial.println(t.data2);
+    Serial.println(t.data3);
+  }
+
   void C2_function1(const Shell::Token*){Serial.println("c2f1");}
   void C2_function2(const Shell::Token*){Serial.println("c2f2");}
   void C2_def(const Shell::Token*){Serial.println("c2d");}
@@ -74,11 +82,12 @@ class Cl{
     Shell::Command{"func4", "f", [this](const Shell::Token* args){this->function4(args);}}
   };
     //child 1 command list commands-------------------
-    const std::array<Shell::Command, 4> child1Commands = std::array{
+    const std::array<Shell::Command, 5> child1Commands = std::array{
       Shell::Command{"func1", "f", [this](const Shell::Token* args){this->C1_function1(args);}},
       Shell::Command{"func2", "f", [this](const Shell::Token* args){this->C1_function2(args);}},
       Shell::Command{"func3", "", [this](const Shell::Token* args){this->C1_function3(args);}},
-      Shell::Command{"func3", "", [this](const Shell::Token* args){this->C1_function4(args);}}
+      Shell::Command{"func4", "", [this](const Shell::Token* args){this->C1_function4(args);}},
+      Shell::Command{"func5", "", [this](const Shell::Token* args){this->C1_function5(args);}}
     };
     //------------------------------------------------
 

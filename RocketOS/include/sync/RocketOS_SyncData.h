@@ -33,7 +33,7 @@ namespace RocketOS{
                 error_t popCallback();
                 bool canBind() const;
             protected:
-                constexpr SyncData_Base(uint8_t* rawData, uint_t rawDataSize, callbackData* callbacks, uint_t numCallbacks) : p_byteData(rawData), p_byteDataSize(rawDataSize), p_callbacks(callbacks), p_numCallbacks(numCallbacks), p_nextFreeChannel(1) {}
+                constexpr SyncData_Base(uint8_t* rawData, uint_t rawDataSize, callbackData* callbacks, uint_t numCallbacks) : p_byteData(rawData), p_byteDataSize(rawDataSize), p_callbacks(callbacks), p_numCallbacks(numCallbacks), p_nextFreeChannel(0) {}
                 inline error_t copyByteData(const ByteData);
             };
 

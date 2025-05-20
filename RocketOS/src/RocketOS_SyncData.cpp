@@ -13,11 +13,10 @@ error_t SyncData_Base::update(const ByteData data, uint_t source){
     error_t error = copyByteData(data);
     if(error != error_t::GOOD) return error;
     //call all callbacks except for the source
-    source--;
     for(uint_t i=0; i<p_nextFreeChannel; i++)
         if(i != source && p_callbacks[i].updatePeriod_us <= p_callbacks[i].lastUpdate){
             p_callbacks[i].lastUpdate = 0;
-            p_callbacks->callback(data);
+            p_callbacks[i].callback(data);
         }
     return error_t::GOOD;
 }
