@@ -1,12 +1,10 @@
 #include "shell\RocketOS_ShellCommandList.h"
 #include <cstring>
+#include <Arduino.h> //for Serial
 
 using namespace RocketOS;
 using namespace Shell;
 
-
-
-//constexpr CommandList::CommandList(const char* name, const Command* commands, uint_t numCommands, const CommandList* children, uint_t numChildren) : m_name(name), m_commands(commands), m_numCommands(numCommands), m_children(children), m_numChildren(numChildren){}
 
 const CommandList* CommandList::getCommandListWithName(const char* name) const{
     for(uint_t i=0; i<m_numChildren; i++)
@@ -25,9 +23,63 @@ const char* CommandList::getName() const{
 }
 
 void CommandList::printLocalCommands() const{
-
+    Serial.print("##### ");
+    Serial.print(m_name);
+    Serial.println(" commands #####");
+    for(uint_t i=0; i<m_numCommands; i++){
+        //print each command except for the default command
+        if(std::strcmp("", m_commands[i].name) != 0){
+            Serial.print(m_commands[i].name);
+            Serial.print(" {");
+            Serial.print(m_commands[i].args);
+            Serial.println("}");
+        }
+    }
+    for(uint_t i=0; i<m_numChildren; i++){
+        //print each subcommand name
+        Serial.print(m_children[i].getName());
+        //print the arg list as would be for a command if a default command exists
+        const Command* defaultCommand = m_children[i].getCommandWithName("");
+        if(defaultCommand != nullptr){
+            Serial.print(" {");
+            Serial.print(defaultCommand->args);
+            Serial.print("}");
+        }
+        Serial.println(" [...]");
+    }
 }
 
-void CommandList::printAllCommands() const{
+void CommandList::printAllCommands(uint_t depth) const{
+    //print each command except for the default command
+    for(uint_t i=0; i<m_numCommands; i++){
+        if(std::strcmp("", m_commands[i].name) != 0){
+            printIndent(depth);
+            Serial.print(m_commands[i].name);
+            Serial.print(" {");
+            Serial.print(m_commands[i].args);
+            Serial.println("}");
+        }
+    }
+    //print each commandList
+    for(uint_t i=0; i<m_numChildren; i++){
+        printIndent(depth);
+        Serial.print(m_children[i].getName());
+        //print the arg list as would be for a command if a default command exists
+        const Command* defaultCommand = m_children[i].getCommandWithName("");
+        if(defaultCommand != nullptr){
+            Serial.print(" {");
+            Serial.print(defaultCommand->args);
+            Serial.print("}");
+        }
+        Serial.println(" [");
+        //recursively print all commands of children
+        m_children[i].printAllCommands(depth+1);
+        printIndent(depth);
+        Serial.println("]");
+    }
+}
 
+void CommandList::printIndent(uint_t num){
+    for(uint_t i=0; i<num; i++)
+        Serial.print("    ");
 }

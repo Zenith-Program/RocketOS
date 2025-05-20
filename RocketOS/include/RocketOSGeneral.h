@@ -39,12 +39,17 @@ static_assert(false, "Only 8, 16, 32 & 64 bit architectures are supported");
 #endif
 #endif
 
-/*error type
+/*error handling
  *
  *
  * 
 */
 namespace RocketOS{
+    /*error type
+     *
+     *
+     * 
+    */
     class error_t{
     private:
         uint_t m_code;
@@ -58,5 +63,22 @@ namespace RocketOS{
 
         static error_t GOOD;
         static error_t ERROR;
+    };
+
+    /*result type
+     *
+     *
+     * 
+    */
+    template<class T>
+    struct result_t{
+        T data;
+        error_t error;
+
+        operator T() const {return data;} 
+        operator error_t() const {return error;} 
+        inline result_t(T newData) : data(newData), error(error_t::GOOD){}
+        inline result_t(error_t newError) : error(newError) {}
+        inline result_t(T newData, error_t newError) : data(newData), error(newError) {}
     };
 }

@@ -4,6 +4,16 @@
 // put function declarations here:
 using namespace RocketOS;
 
+class SyncTest{
+public:
+  Sync::SyncData<float_t> data1;
+  Sync::SyncData<float_t> data2;
+
+  SyncTest(){
+    data1.bind(data2);
+  }
+};
+
 class Cl{
   private:
     
@@ -12,19 +22,33 @@ class Cl{
     return &m_commands;
   }
 
+  SyncTest t;
+
 
 
   /*Command Callbacks
   */
   
-  void function1(const Shell::Token*){Serial.println("f1");}
-  void function2(const Shell::Token*){Serial.println("f2");}
+  void function1(const Shell::Token*){m_commands.printLocalCommands();}
+  void function2(const Shell::Token*){m_commands.printAllCommands();}
   void function3(const Shell::Token*){Serial.println("f3");}
   void function4(const Shell::Token*){Serial.println("f4");}
 
-  void C1_function1(const Shell::Token*){Serial.println("c1f1");}
-  void C1_function2(const Shell::Token*){Serial.println("c1f2");}
-  void C1_function3(const Shell::Token*){Serial.println("c1f3");}
+  void C1_function1(const Shell::Token* args){
+    float_t param = args[0].getFloatData();
+    t.data1 = param;
+  }
+
+  void C1_function2(const Shell::Token* args){
+    float_t param = args[0].getFloatData();
+    t.data2 = param;
+  }
+  void C1_function3(const Shell::Token*){
+    Serial.println(t.data1);
+  }
+  void C1_function4(Shell::arg_t){
+    Serial.println(t.data2);
+  }
 
   void C2_function1(const Shell::Token*){Serial.println("c2f1");}
   void C2_function2(const Shell::Token*){Serial.println("c2f2");}
@@ -44,16 +68,17 @@ class Cl{
   */
  //root command list commands------------------------
   const std::array<Shell::Command, 4> rootCommands = std::array{  
-    Shell::Command{"func1", "u", [this](Shell::arg_t args){this->function1(args);}},
-    Shell::Command{"func2", "f", [this](const Shell::Token* args){this->function2(args);}},
-    Shell::Command{"func3", "u", [this](const Shell::Token* args){this->function3(args);}},
-    Shell::Command{"func4", "u", [this](const Shell::Token* args){this->function4(args);}}
+    Shell::Command{"func1", "", [this](Shell::arg_t args){this->function1(args);}},
+    Shell::Command{"func2", "", [this](const Shell::Token* args){this->function2(args);}},
+    Shell::Command{"func3", "", [this](const Shell::Token* args){this->function3(args);}},
+    Shell::Command{"func4", "f", [this](const Shell::Token* args){this->function4(args);}}
   };
     //child 1 command list commands-------------------
-    const std::array<Shell::Command, 3> child1Commands = std::array{
-      Shell::Command{"func1", "u", [this](const Shell::Token* args){this->C1_function1(args);}},
-      Shell::Command{"func2", "fu", [this](const Shell::Token* args){this->C1_function2(args);}},
-      Shell::Command{"func3", "u", [this](const Shell::Token* args){this->C1_function3(args);}}
+    const std::array<Shell::Command, 4> child1Commands = std::array{
+      Shell::Command{"func1", "f", [this](const Shell::Token* args){this->C1_function1(args);}},
+      Shell::Command{"func2", "f", [this](const Shell::Token* args){this->C1_function2(args);}},
+      Shell::Command{"func3", "", [this](const Shell::Token* args){this->C1_function3(args);}},
+      Shell::Command{"func3", "", [this](const Shell::Token* args){this->C1_function4(args);}}
     };
     //------------------------------------------------
 
@@ -92,7 +117,7 @@ class Cl{
     Shell::CommandList{"Child3", child3Commands.data(), child3Commands.size(), child3ChildrenList.data(), child3ChildrenList.size()}
   };
 
-  const Shell::CommandList m_commands = {"Name", rootCommands.data(), rootCommands.size(), children.data(), children.size()};
+  const Shell::CommandList m_commands = {"root", rootCommands.data(), rootCommands.size(), children.data(), children.size()};
   //------------------------------------------------
 
 };
@@ -112,6 +137,7 @@ public:
 };
 
 InterpreterTest g_test;
+
 
 
 

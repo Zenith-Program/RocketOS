@@ -1,5 +1,5 @@
 #include "shell\RocketOS_ShellSerial.h"
-#include <Arduino.h>
+#include <Arduino.h> //For Serial
 
 using namespace RocketOS;
 

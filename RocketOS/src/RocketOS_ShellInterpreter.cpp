@@ -1,6 +1,6 @@
 #include "shell\RocketOS_ShellInterpreter.h"
 #include <cstring>
-#include <Arduino.h>
+#include <Arduino.h> //for Serial
 
 using namespace RocketOS;
 using namespace RocketOS::Shell;

@@ -7,7 +7,7 @@
 
 /*RocketOS Interpreter
  * The interpreter reads incoming user inputs and searches for a matching command in the command tree. 
- * It executes command callback functions when it finds a match.A0
+ * It executes command callback functions when it finds a match.
  * For more info about the command tree, look at RocketOS_ShellCommandList.h or the README in this directory
  * For more info about the parsing process, look to RocketOS_ShellToken.h or the README.
  * 
@@ -39,14 +39,14 @@ namespace RocketOS{
             
 			/*parsing interface 
              * The function handleInput reads any available user input into m_inputBuffer and searches for a command in the command tree defined by the m_rootCommandList.
-             * If a command is found it's callback function is executed, otherwise and error message is printed.
+             * If a command is found it's callback function is executed, otherwise an error message is printed.
              *
             */
             error_t handleInput();
 			
 		private:
             /*helper functions
-             * These private helper functions are used by the parsing algorithim. If you dont mess with the parsing algorithim you dont have to worry about these.
+             * These private helper functions are used by the parsing algorithim. If you don't mess with the parsing algorithim you dont have to worry about these.
              * readline - interprets whatever is currently stored in m_inputBuffer. executes the command if found and prints an error message otherwise.
              * interpretCommandList - recursive function used by readline to interpret each layer of the command tree.
              * reorderTokens - parsing happens in reverse for legacy reasons so this is used to reorder the tokens before passing them to the command callback.

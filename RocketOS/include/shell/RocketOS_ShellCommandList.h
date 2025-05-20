@@ -99,7 +99,14 @@ namespace RocketOS{
             const Command* getCommandWithName(const char*) const;
             const char* getName() const;
             void printLocalCommands() const;
-            void printAllCommands() const;
+            void printAllCommands(uint_t=0) const;
+
+            /*Helper functions
+             * printIndent - prints n tabs. Used for recursively printing the command tree
+             *
+             * 
+            */
+            static void printIndent(uint_t);
         };
     }
 }
