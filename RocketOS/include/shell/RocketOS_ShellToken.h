@@ -105,7 +105,7 @@ namespace RocketOS{
 
 	/*arg_t alias
 	 * arg_t is a type alias for command callbacks to use.
-	 * An array of tokens is passed as a pointer to command callbacks to extract each their arguments from.
+	 * An array of tokens is passed to command callbacks as a pointer for them extract each their arguments from.
 	 * A single parameter of type arg_t should be used for all command callbacks regardless of how many arguments they have.
 	*/
 	using arg_t = const Token*;

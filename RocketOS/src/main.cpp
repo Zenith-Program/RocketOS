@@ -6,13 +6,24 @@ using namespace RocketOS;
 
 class SyncTest{
 public:
-  Sync::SyncData<float_t> data1;
+  Sync::SyncData<float_t, 4> data1;
   Sync::SyncData<float_t> data2;
   Sync::SyncData<float_t> data3;
+  
+  std::array<Sync::EEPROMValue_Base*, 2> listData;
+  Sync::EEPROMUpdateList updateList = {listData.data(), listData.size()};
+  Sync::EEPROMValue<float_t> eepromNode1;
+  Sync::EEPROMValue<float_t> eepromNode2;
+
+  Sync::EEPROM<float_t, uint_t, float_t> eeprom;
 
   SyncTest(){
+    eepromNode1.setList(&updateList);
+    eepromNode2.setList(&updateList);
     data2.bind(data3);
     data1.bind(data3);
+    eepromNode1.bind(data2);
+    eepromNode2.bind(data3);
   }
 };
 
@@ -25,6 +36,8 @@ class Cl{
   }
 
   SyncTest t;
+
+  
 
 
 
@@ -58,12 +71,15 @@ class Cl{
     Serial.println(t.data3);
   }
 
-  void C2_function1(const Shell::Token*){Serial.println("c2f1");}
-  void C2_function2(const Shell::Token*){Serial.println("c2f2");}
+  void C2_function1(const Shell::Token*){Serial.println((uint_t)t.listData[0]);}
+  void C2_function2(const Shell::Token*){Serial.println((uint_t)t.listData[1]);}
   void C2_def(const Shell::Token*){Serial.println("c2d");}
 
-  void C3_function1(const Shell::Token*){Serial.println("c3f1");}
-  void C3_function2(const Shell::Token*){Serial.println("c3f2");}
+  void C3_function1(const Shell::Token* args){
+    uint_t index = args[0].getUnsignedData();
+    t.eeprom.getPoly(index)->restore();
+  }
+  void C3_function2(const Shell::Token*){t.eeprom.get<0>().restore();}
   void C3_function3(const Shell::Token*){Serial.println("c3f3");}
   void C3_def(const Shell::Token*){Serial.println("c3d");}
 
@@ -93,8 +109,8 @@ class Cl{
 
     //child 2 command list commands-------------------
     const std::array<Shell::Command, 3> child2Commands = std::array{
-      Shell::Command{"func1", "w", [this](const Shell::Token* args){this->C2_function1(args);}},
-      Shell::Command{"func2", "u", [this](const Shell::Token* args){this->C2_function2(args);}},
+      Shell::Command{"func1", "", [this](const Shell::Token* args){this->C2_function1(args);}},
+      Shell::Command{"func2", "", [this](const Shell::Token* args){this->C2_function2(args);}},
       Shell::Command{"", "w", [this](const Shell::Token* args){this->C2_def(args);}}
     };
     //------------------------------------------------
@@ -102,9 +118,9 @@ class Cl{
 
     //child 3 command list commands-------------------
     const std::array<Shell::Command, 4> child3Commands = std::array{
-      Shell::Command{"func1", "is", [this](const Shell::Token* args){this->C3_function1(args);}},
-      Shell::Command{"func2", "s", [this](const Shell::Token* args){this->C3_function2(args);}},
-      Shell::Command{"func3", "u", [this](const Shell::Token* args){this->C3_function3(args);}},
+      Shell::Command{"func1", "u", [this](const Shell::Token* args){this->C3_function1(args);}},
+      Shell::Command{"func2", "", [this](const Shell::Token* args){this->C3_function2(args);}},
+      Shell::Command{"func3", "", [this](const Shell::Token* args){this->C3_function3(args);}},
       Shell::Command{"", "", [this](const Shell::Token* args){this->C3_def(args);}}
     };
       //child 1 (of child3) command list commands---------
