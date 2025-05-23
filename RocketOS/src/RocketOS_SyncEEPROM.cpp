@@ -8,8 +8,12 @@ using namespace RocketOS;
 using namespace Sync;
 
 //implementation for EEPROMValue_Base class------------------------------------
-error_t EEPROMValue_Base::restore(){
-    Serial.println("Restoring");
+error_t EEPROMValue_Base::update(){
+    if(p_list == nullptr) return error_t::ERROR;
+    if(!p_onList){
+        p_list->push(this);
+        p_onList = true;
+    } 
     return error_t::GOOD;
 }
 
@@ -42,5 +46,15 @@ error_t EEPROMUpdateList::push(EEPROMValue_Base* value){
 result_t<EEPROMValue_Base*> EEPROMUpdateList::pop(){
     if(m_nextOpen <= m_positions) return error_t::ERROR;
     m_nextOpen--;
-    return *(m_nextOpen+1);
+    return *(m_nextOpen);
+}
+
+error_t EEPROMUpdateList::saveAll(){
+    error_t error = error_t::GOOD;
+    auto result = pop();
+    while(result.error == error_t::GOOD){
+        if(result.data->save() != error_t::GOOD) error = error_t::ERROR;
+        result = pop();
+    }
+    return error;
 }

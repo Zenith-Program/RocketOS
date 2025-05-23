@@ -34,7 +34,7 @@
  * 
  * The operation of the SyncData class is actually relatively simple:
  * SyncData objects, in addition to the data they store,  have a list of callback functions that are executed whenever the underlying value is updated. 
- * When a variable is bound, a callback function for the object it was bound to is added to it's callback list allowing it to update that object.
+ * When a variable is bound to another object, a callback function for the object it was bound to is added to it's callback list allowing it to update that object.
  * 
 */
 
@@ -56,7 +56,6 @@ namespace RocketOS{
        template <class T>
         struct callbackData{
             uint_t updatePeriod_us;
-            elapsedMicros lastUpdate;
             callback_t<T> callback;
         };
 
@@ -65,49 +64,58 @@ namespace RocketOS{
          *
          * 
         */
-        template<class T, uint_t t_callbackListSize=RocketOS_Sync_DefaultCallbackListSize>
-        class SyncData{
-        private:
+        template<class T>
+        class SyncData_BASE{
+        protected:
             /*data members
              * m_data - value of the underlying variable
+             * m_bytes - bytes of the underlying variable
              * m_callbacks - list of callback functions
-             * m_nextFreeChannel - stores how many callbacks have been bound and where to bound the next one
+             * m_nextFreeChannel - stores how many callbacks have been bound and where to place the next one
             */
-            T m_data;
-            std::array<callbackData<T>, t_callbackListSize> m_callbacks;
+            union{
+                T m_data;
+                uint8_t m_bytes[sizeof(T)];
+            };
+            callbackData<T>* const m_callbacks;
+            const uint_t m_callbacksSize;
             uint_t m_nextFreeChannel;
+            elapsedMicros m_lastUpdate;
         public:
+
             /*construction & base type conversion
              *
              *
              * 
             */
-            constexpr SyncData() : m_nextFreeChannel(0) {}
-            constexpr SyncData(const T& data) : m_data(data), m_nextFreeChannel(0) {}
-            void operator=(const T& data){
-                m_data = data;
-                for(uint_t i=0; i<m_nextFreeChannel; i++)
-                    if(m_callbacks[i].updatePeriod_us <= m_callbacks[i].lastUpdate){
-                        m_callbacks[i].lastUpdate = 0;
-                        m_callbacks[i].callback(m_data);
-                    }
-            }
-            operator T() const {return m_data;} 
+            constexpr SyncData_BASE(callbackData<T>* callbacks, uint_t size) : m_callbacks(callbacks), m_callbacksSize(size), m_nextFreeChannel(0), m_lastUpdate(0) {}
+            constexpr SyncData_BASE(callbackData<T>* callbacks, uint_t size, const T& data) : m_data(data), m_callbacks(callbacks), m_callbacksSize(size), m_nextFreeChannel(0), m_lastUpdate(0) {}
 
             /*update function
              *
              *
              * 
             */
-            void update(const T& data, uint_t sourceChannel){
+           void update(const T& data){
+                if(m_data == data) return;
                 //copy new data
                 m_data = data;
                 //call all callbacks except for the source
                 for(uint_t i=0; i<m_nextFreeChannel; i++)
-                    if(i != sourceChannel && m_callbacks[i].updatePeriod_us <= m_callbacks[i].lastUpdate){
-                        m_callbacks[i].lastUpdate = 0;
+                    if(m_callbacks[i].updatePeriod_us <= m_lastUpdate)
                         m_callbacks[i].callback(m_data);
-                    }
+                m_lastUpdate = 0;
+            }
+
+            void update(const T& data, uint_t sourceChannel){
+                if(m_data == data) return;
+                //copy new data
+                m_data = data;
+                //call all callbacks except for the source
+                for(uint_t i=0; i<m_nextFreeChannel; i++)
+                    if(i != sourceChannel && m_callbacks[i].updatePeriod_us <= m_lastUpdate)
+                        m_callbacks[i].callback(m_data);
+                m_lastUpdate = 0;
             }
 
             /*addCallback function
@@ -116,8 +124,8 @@ namespace RocketOS{
              * 
             */
             result_t<uint_t> addCallback(callback_t<T> callback, uint_t refresh){
-                if(m_nextFreeChannel >= m_callbacks.size()) return error_t::ERROR;
-                m_callbacks[m_nextFreeChannel] = callbackData<T>{refresh, 0, callback};
+                if(m_nextFreeChannel >= m_callbacksSize) return error_t::ERROR;
+                m_callbacks[m_nextFreeChannel] = callbackData<T>{refresh, callback};
                 m_nextFreeChannel++;
                 return m_nextFreeChannel-1;
             }
@@ -139,7 +147,7 @@ namespace RocketOS{
              * 
             */
             bool canBind() const{
-                return m_nextFreeChannel < m_callbacks.size();
+                return m_nextFreeChannel < m_callbacksSize;
             }
 
             /*nextFree function
@@ -148,9 +156,38 @@ namespace RocketOS{
              * 
             */
             result_t<uint_t> nextFree() const{
-                if(m_nextFreeChannel >= m_callbacks.size()) return {m_nextFreeChannel, error_t::ERROR};
+                if(m_nextFreeChannel >= m_callbacksSize) return {m_nextFreeChannel, error_t::ERROR};
                 return m_nextFreeChannel;
             }
+
+            /*getReference function
+             *
+             *
+             * 
+            */
+            ConstBytes getBytes() const{
+                return {m_bytes, sizeof(T)};
+            }
+        };
+
+        template<class T, uint_t tt_callbackSize=RocketOS_Sync_DefaultCallbackListSize>
+        class SyncData : public SyncData_BASE<T>{
+        private:
+            std::array<callbackData<T>, tt_callbackSize> m_callbackArr;
+        public:
+            constexpr SyncData() : SyncData_BASE<T>(m_callbackArr.data(), m_callbackArr.size()) {}
+            constexpr SyncData(const T& data) : SyncData_BASE<T>(m_callbackArr.data(), m_callbackArr.size(), data) {}
+
+            /*Underlying type conversion operaotrs
+             *
+             *
+             * 
+            */
+
+            void operator=(const T& data){
+                this->update(data);
+            }
+            operator T() const {return this->m_data;} 
 
             /*variable - variable bind
              *
@@ -160,21 +197,21 @@ namespace RocketOS{
             template<uint_t tt_otherCallbackSize>
             error_t bind(SyncData<T, tt_otherCallbackSize>& other, uint_t refresh=RocketOS_Sync_DefaultRefreshPeriod_us){
                 //check that binding is possible
-                if(!canBind() || !other.canBind()) return error_t::ERROR;
+                if(!this->canBind() || !other.canBind()) return error_t::ERROR;
                 //prepare callback captures
                 auto other_ptr = &other;
                 uint_t otherChannel = other.nextFree();
-                uint_t thisChannel = m_nextFreeChannel;
+                uint_t thisChannel = this->m_nextFreeChannel;
                 //add callback to other in this object
-                error_t error = addCallback([other_ptr, otherChannel](const T& data){other_ptr->update(data, otherChannel);}, refresh).error;
+                error_t error = this->addCallback([other_ptr, otherChannel](const T& data){other_ptr->update(data, otherChannel);}, refresh);
                 if(error != error_t::GOOD) return error;
                 //add callback to this in other object
-                error = other.addCallback([this, thisChannel](const T& data){this->update(data, thisChannel);}, refresh).error;
+                error = other.addCallback([this, thisChannel](const T& data){this->update(data, thisChannel);}, refresh);
                 if(error != error_t::GOOD){
-                    popCallback();
+                    this->popCallback();
                     return error;
                 }
-                other.update(m_data, otherChannel);
+                other.update(this->m_data, otherChannel);
                 return error_t::GOOD;
             }
         };

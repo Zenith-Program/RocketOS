@@ -9,21 +9,13 @@ public:
   Sync::SyncData<float_t, 4> data1;
   Sync::SyncData<float_t> data2;
   Sync::SyncData<float_t> data3;
-  
-  std::array<Sync::EEPROMValue_Base*, 2> listData;
-  Sync::EEPROMUpdateList updateList = {listData.data(), listData.size()};
-  Sync::EEPROMValue<float_t> eepromNode1;
-  Sync::EEPROMValue<float_t> eepromNode2;
 
-  Sync::EEPROM<float_t, uint_t, float_t> eeprom;
+  Sync::EEPROM<float_t, float_t> eeprom;
 
   SyncTest(){
-    eepromNode1.setList(&updateList);
-    eepromNode2.setList(&updateList);
-    data2.bind(data3);
     data1.bind(data3);
-    eepromNode1.bind(data2);
-    eepromNode2.bind(data3);
+    eeprom.get<0>().bind(data2);
+    eeprom.get<1>().bind(data3);
   }
 };
 
@@ -71,15 +63,12 @@ class Cl{
     Serial.println(t.data3);
   }
 
-  void C2_function1(const Shell::Token*){Serial.println((uint_t)t.listData[0]);}
-  void C2_function2(const Shell::Token*){Serial.println((uint_t)t.listData[1]);}
+  void C2_function1(const Shell::Token*){t.eeprom.saveChanges();}
+  void C2_function2(const Shell::Token*){t.eeprom.restoreAll();}
   void C2_def(const Shell::Token*){Serial.println("c2d");}
 
-  void C3_function1(const Shell::Token* args){
-    uint_t index = args[0].getUnsignedData();
-    t.eeprom.getPoly(index)->restore();
-  }
-  void C3_function2(const Shell::Token*){t.eeprom.get<0>().restore();}
+  void C3_function1(const Shell::Token* args){Serial.println("c3f1");}
+  void C3_function2(const Shell::Token*){Serial.println("c3f2");}
   void C3_function3(const Shell::Token*){Serial.println("c3f3");}
   void C3_def(const Shell::Token*){Serial.println("c3d");}
 
