@@ -4,21 +4,6 @@
 // put function declarations here:
 using namespace RocketOS;
 
-class SyncTest{
-public:
-  Sync::SyncData<float_t, 4> data1;
-  Sync::SyncData<float_t> data2;
-  Sync::SyncData<float_t> data3;
-
-  Sync::EEPROM<float_t, float_t> eeprom;
-
-  SyncTest(){
-    data1.bind(data3);
-    eeprom.get<0>().bind(data2);
-    eeprom.get<1>().bind(data3);
-  }
-};
-
 class Cl{
   private:
     
@@ -26,8 +11,6 @@ class Cl{
   const Shell::CommandList* getList()const{
     return &m_commands;
   }
-
-  SyncTest t;
 
   
 
@@ -43,28 +26,22 @@ class Cl{
 
   void C1_function1(const Shell::Token* args){
     float_t param = args[0].getFloatData();
-    t.data1 = param;
   }
 
   void C1_function2(const Shell::Token* args){
     float_t param = args[0].getFloatData();
-    t.data2 = param;
   }
   void C1_function3(const Shell::Token*){
-    Serial.println(t.data1);
   }
   void C1_function4(Shell::arg_t){
-    Serial.println(t.data2);
   }
 
   void C1_function5(Shell::arg_t){
-    Serial.println(t.data1);
-    Serial.println(t.data2);
-    Serial.println(t.data3);
+
   }
 
-  void C2_function1(const Shell::Token*){t.eeprom.saveChanges();}
-  void C2_function2(const Shell::Token*){t.eeprom.restoreAll();}
+  void C2_function1(const Shell::Token*){}
+  void C2_function2(const Shell::Token*){}
   void C2_def(const Shell::Token*){Serial.println("c2d");}
 
   void C3_function1(const Shell::Token* args){Serial.println("c3f1");}
