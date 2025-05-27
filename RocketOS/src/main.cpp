@@ -11,9 +11,18 @@ class Cl{
   const Shell::CommandList* getList()const{
     return &m_commands;
   }
+  float_t a;
+  uint8_t b;
+  uint_t c;
+
+
+  Persistent::EEPROM<float_t, uint8_t, uint_t> eeprom = Persistent::EEPROM<float_t, uint8_t, uint_t>{
+    Persistent::EEPROMSettings<float_t>{a, 0.5, "helloWorld"},
+    Persistent::EEPROMSettings<uint8_t>{b, 2, "hello"},
+    Persistent::EEPROMSettings<uint_t>{c, 0, "hello"}
+  };
 
   
-
 
 
   /*Command Callbacks
@@ -25,7 +34,8 @@ class Cl{
   void function4(const Shell::Token*){Serial.println("f4");}
 
   void C1_function1(const Shell::Token* args){
-    float_t param = args[0].getFloatData();
+    uint32_t a = eeprom.hash();
+    Serial.println(a);
   }
 
   void C1_function2(const Shell::Token* args){
