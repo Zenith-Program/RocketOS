@@ -2,7 +2,8 @@
 #include "RocketOS_ShellGeneral.h"
 
 /*SerialInput class
- *This class is used to handle serial inputs for the shell. It buffers inputs from Serial so they can be interpreted in their entirety by the command interpreter 
+ * This class is used to handle serial inputs for the shell. 
+ * It buffers inputs from Serial so they can be interpreted in their entirety by the command interpreter 
  *
  * 
 */

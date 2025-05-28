@@ -14,12 +14,14 @@ class Cl{
   float_t a;
   uint8_t b;
   uint_t c;
+  std::array<char, 20> name;
 
 
-  Persistent::EEPROM<float_t, uint8_t, uint_t> eeprom = Persistent::EEPROM<float_t, uint8_t, uint_t>{
+  Persistent::EEPROMBackup<float_t, uint8_t, uint_t, std::array<char, 20>> eeprom{
     Persistent::EEPROMSettings<float_t>{a, 0.5, "helloWorld"},
-    Persistent::EEPROMSettings<uint8_t>{b, 2, "hello"},
-    Persistent::EEPROMSettings<uint_t>{c, 0, "hello"}
+    Persistent::EEPROMSettings<uint8_t>{b, 2, "data"},
+    Persistent::EEPROMSettings<uint_t>{c, 0, "hello"},
+    Persistent::EEPROMSettings<std::array<char, 20>>{name, "default", "str"}
   };
 
   
@@ -33,28 +35,46 @@ class Cl{
   void function3(const Shell::Token*){Serial.println("f3");}
   void function4(const Shell::Token*){Serial.println("f4");}
 
-  void C1_function1(const Shell::Token* args){
+  void C1_function1(const Shell::Token*){
     uint32_t a = eeprom.hash();
     Serial.println(a);
   }
 
-  void C1_function2(const Shell::Token* args){
-    float_t param = args[0].getFloatData();
+  void C1_function2(const Shell::Token*){
+    bool action = eeprom.restore();
+    if(action) Serial.println("Restored Defaults");
+    else Serial.println("Restored from EEPROM");
   }
   void C1_function3(const Shell::Token*){
-  }
-  void C1_function4(Shell::arg_t){
+    eeprom.save();
   }
 
-  void C1_function5(Shell::arg_t){
+  void C1_function4(Shell::arg_t args){
+    float_t input = args[0].getFloatData();
+    a = input;
+  }
 
+  void C1_function5(Shell::arg_t args){
+    uint_t input = args[0].getUnsignedData();
+    c = input;
+  }
+
+  void C1_function6(Shell::arg_t args){
+    uint8_t input = static_cast<uint8_t>(args[0].getUnsignedData());
+    b = input;
+  }
+
+  void C1_function7(Shell::arg_t){
+    Serial.println(a);
+    Serial.println(b);
+    Serial.println(c);
   }
 
   void C2_function1(const Shell::Token*){}
   void C2_function2(const Shell::Token*){}
   void C2_def(const Shell::Token*){Serial.println("c2d");}
 
-  void C3_function1(const Shell::Token* args){Serial.println("c3f1");}
+  void C3_function1(const Shell::Token*){Serial.println("c3f1");}
   void C3_function2(const Shell::Token*){Serial.println("c3f2");}
   void C3_function3(const Shell::Token*){Serial.println("c3f3");}
   void C3_def(const Shell::Token*){Serial.println("c3d");}
@@ -74,12 +94,14 @@ class Cl{
     Shell::Command{"func4", "f", [this](const Shell::Token* args){this->function4(args);}}
   };
     //child 1 command list commands-------------------
-    const std::array<Shell::Command, 5> child1Commands = std::array{
-      Shell::Command{"func1", "f", [this](const Shell::Token* args){this->C1_function1(args);}},
-      Shell::Command{"func2", "f", [this](const Shell::Token* args){this->C1_function2(args);}},
+    const std::array<Shell::Command, 7> child1Commands = std::array{
+      Shell::Command{"func1", "", [this](const Shell::Token* args){this->C1_function1(args);}},
+      Shell::Command{"func2", "", [this](const Shell::Token* args){this->C1_function2(args);}},
       Shell::Command{"func3", "", [this](const Shell::Token* args){this->C1_function3(args);}},
-      Shell::Command{"func4", "", [this](const Shell::Token* args){this->C1_function4(args);}},
-      Shell::Command{"func5", "", [this](const Shell::Token* args){this->C1_function5(args);}}
+      Shell::Command{"func4", "f", [this](const Shell::Token* args){this->C1_function4(args);}},
+      Shell::Command{"func5", "u", [this](const Shell::Token* args){this->C1_function5(args);}},
+      Shell::Command{"func6", "u", [this](const Shell::Token* args){this->C1_function6(args);}},
+      Shell::Command{"func7", "", [this](const Shell::Token* args){this->C1_function7(args);}}
     };
     //------------------------------------------------
 

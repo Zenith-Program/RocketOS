@@ -1,7 +1,7 @@
 #pragma once
 #include "RocketOS_PersistentGeneral.h"
-#include <type_traits>
-#include <Arduino.h> //debug
+#include <type_traits> //compile time type checks
+#include <EEPROM.h> //EEPROM hadrware abstraction
 
 namespace RocketOS{
     namespace Persistent{
@@ -46,6 +46,7 @@ namespace RocketOS{
                 if(result.error != error_t::GOOD) return result.error;
                 m_savedValue = result.data;
                 m_value = m_savedValue;
+                return error_t::GOOD;
             }
 
             uint32_t hash() const{
@@ -73,23 +74,19 @@ namespace RocketOS{
             }
 
             static error_t saveByte(uint8_t byte, uint_t adress){
-                Serial.print("Saving ");
-                Serial.print(byte);
-                Serial.print(" to location");
-                Serial.println(adress);
+                EEPROM.write(adress, byte);
                 return error_t::GOOD;
             }
 
             static error_t saveValue(const T& value, uint_t adress){
-                Serial.print("Saving object to adress ");
-                Serial.println(adress);
+                EEPROM.put(adress, value);
                 return error_t::GOOD;
             }
 
             static result_t<T> readVal(uint_t adress){
-                Serial.print("Reading from adress ");
-                Serial.println(adress);
-                return error_t::GOOD;
+                T readValue;
+                EEPROM.get(adress, readValue);
+                return readValue;
             }
         };
     }
