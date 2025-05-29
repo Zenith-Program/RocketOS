@@ -26,6 +26,10 @@ class Cl{
     Persistent::EEPROMSettings<std::array<char, 20>>{name, "default", "str"}
   };
 
+  SdFat sd;
+  std::array<char, 50> messageBuffer;
+  Telemetry::SDFile messages = Telemetry::SDFile(sd, messageBuffer.data(), messageBuffer.size());
+
   
 
 
@@ -72,9 +76,28 @@ class Cl{
     Serial.println(c);
   }
 
-  void C2_function1(const Shell::Token*){}
-  void C2_function2(const Shell::Token*){}
-  void C2_def(const Shell::Token*){Serial.println("c2d");}
+  void C2_function1(const Shell::Token*){
+    if(messages.newFile()!= error_t::GOOD) Serial.println("error");
+  }
+  void C2_function2(const Shell::Token* args){
+    char buffer[48];
+    args[0].copyStringData(buffer, 48);
+    if(messages.log(buffer)!= error_t::GOOD) Serial.println("error");
+  }
+  void C2_function3(Shell::arg_t){
+    if(messages.setMode(Telemetry::SDFileModes::Record) != error_t::GOOD) Serial.println("error");
+  }
+  void C2_function4(Shell::arg_t){
+    if(messages.setMode(Telemetry::SDFileModes::Buffer)!= error_t::GOOD) Serial.println("error");
+  }
+  void C2_function5(Shell::arg_t){
+    if(messages.flush()!= error_t::GOOD) Serial.println("error");
+  }
+  void C2_function6(Shell::arg_t){
+    if(messages.close()!= error_t::GOOD) Serial.println("error");
+  }
+  void C2_def(const Shell::Token*){sd.begin(SdioConfig(FIFO_SDIO));}
+
 
   void C3_function1(const Shell::Token*){Serial.println("c3f1");}
   void C3_function2(const Shell::Token*){Serial.println("c3f2");}
@@ -108,10 +131,14 @@ class Cl{
     //------------------------------------------------
 
     //child 2 command list commands-------------------
-    const std::array<Shell::Command, 3> child2Commands = std::array{
+    const std::array<Shell::Command, 7> child2Commands = std::array{
       Shell::Command{"func1", "", [this](const Shell::Token* args){this->C2_function1(args);}},
       Shell::Command{"func2", "", [this](const Shell::Token* args){this->C2_function2(args);}},
-      Shell::Command{"", "w", [this](const Shell::Token* args){this->C2_def(args);}}
+      Shell::Command{"func3", "", [this](const Shell::Token* args){this->C2_function3(args);}},
+      Shell::Command{"func4", "", [this](const Shell::Token* args){this->C2_function4(args);}},
+      Shell::Command{"func5", "", [this](const Shell::Token* args){this->C2_function5(args);}},
+      Shell::Command{"func6", "", [this](const Shell::Token* args){this->C2_function6(args);}},
+      Shell::Command{"", "", [this](const Shell::Token* args){this->C2_def(args);}}
     };
     //------------------------------------------------
 
