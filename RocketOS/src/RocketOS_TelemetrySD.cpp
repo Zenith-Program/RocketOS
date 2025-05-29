@@ -7,7 +7,7 @@ using namespace Telemetry;
 #define SD_OpenNew O_WRITE | O_CREAT | O_TRUNC
 #define SD_OpenAppend O_WRITE | O_CREAT | O_AT_END
 
-SDFile::SDFile(SdFat& sd, char* buffer, uint_t bufferSize) : m_sd(sd), m_fileName(RocketOS_TelemetryDefaultFileName), m_mode(SDFileModes::Record), m_buffer(buffer), m_bufferSize(bufferSize), m_currentBufferPos(buffer){}
+SDFile::SDFile(SdFat& sd, char* buffer, uint_t bufferSize) : m_sd(sd), m_fileName(RocketOS_Telemetry_SDDefaultFileName), m_mode(SDFileModes::Record), m_buffer(buffer), m_bufferSize(bufferSize), m_currentBufferPos(buffer){}
 
 SDFile::SDFile(SdFat& sd, char* buffer, uint_t bufferSize, const char* name) : m_sd(sd),  m_fileName(name), m_mode(SDFileModes::Record), m_buffer(buffer), m_bufferSize(bufferSize), m_currentBufferPos(buffer){}
 
@@ -17,11 +17,6 @@ void SDFile::setFileName(const char* name){
 }
 const char* SDFile::getFileName() const{
     return m_fileName;
-}
-
-error_t SDFile::log(const char* message){
-    if(m_mode == SDFileModes::Record) return logRecord(message);
-    return logBuffer(message);
 }
 
 error_t SDFile::setMode(SDFileModes newMode){
@@ -57,22 +52,6 @@ error_t SDFile::newFile(){
 }
 
 //private mode specific implementations
-error_t SDFile::logRecord(const char* message){
-    if(!m_file.isOpen()) m_file = m_sd.open(m_fileName, SD_OpenAppend);
-    if(!m_file) return error_t::ERROR;
-    m_file.print(message);
-    return error_t::GOOD;
-}
-
-error_t SDFile::logBuffer(const char* message){
-    uint_t remainingSpace = (m_buffer + m_bufferSize-1) - m_currentBufferPos;
-    uint_t messageLength = std::strlen(message);
-    uint_t copyLength = std::min(remainingSpace, messageLength);
-    std::memcpy(m_currentBufferPos, message, copyLength);
-    m_currentBufferPos += copyLength;
-    if(copyLength != messageLength) return error_t::ERROR;
-    return error_t::GOOD;
-}
 
 error_t SDFile::flushRecord(){
     m_file.flush();

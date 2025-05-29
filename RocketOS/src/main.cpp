@@ -30,6 +30,12 @@ class Cl{
   std::array<char, 50> messageBuffer;
   Telemetry::SDFile messages = Telemetry::SDFile(sd, messageBuffer.data(), messageBuffer.size());
 
+  Telemetry::DataLog<64, float_t, uint_t> telemetry{ 
+    sd,
+    Telemetry::DataLogSettings<float_t>{a, "altitude"},
+    Telemetry::DataLogSettings<uint_t>{b, "state"}
+  };
+
   
 
 
@@ -82,7 +88,7 @@ class Cl{
   void C2_function2(const Shell::Token* args){
     char buffer[48];
     args[0].copyStringData(buffer, 48);
-    if(messages.log(buffer)!= error_t::GOOD) Serial.println("error");
+    if(messages.log(static_cast<char*>(buffer))!= error_t::GOOD) Serial.println("error");
   }
   void C2_function3(Shell::arg_t){
     if(messages.setMode(Telemetry::SDFileModes::Record) != error_t::GOOD) Serial.println("error");
