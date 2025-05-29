@@ -50,7 +50,8 @@ namespace RocketOS{
             }
 
             uint32_t hash() const{
-                return strHash(m_name);
+                uint32_t nameHash = strHash(m_name);
+                return ((nameHash << 5) + nameHash) + static_cast<uint32_t>(sizeof(T));
             }
 
             error_t makeDefault(){

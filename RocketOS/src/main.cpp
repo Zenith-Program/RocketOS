@@ -8,9 +8,11 @@ class Cl{
   private:
     
   public:
-  const Shell::CommandList* getList()const{
+  
+  const Shell::CommandList* getList() const{
     return &m_commands;
   }
+
   float_t a;
   uint8_t b;
   uint_t c;
