@@ -1,10 +1,34 @@
 #pragma once
 #include "RocketOS_TelemetryGeneral.h"
 #include "RocketOS_TelemetrySD.h"
-#include "RocketOS_TelemetryDataLogValue.h"
 
 namespace RocketOS{
     namespace Telemetry{
+
+        template<class T>
+        struct DataLogSettings{
+            const T& value;
+            const char* name;
+        };
+
+
+        template<class T>
+        class DataLogValue{
+        private:
+            const T& m_value;
+            const char* m_name;
+        public:
+            DataLogValue(DataLogSettings<T> settings) : m_value(settings.value), m_name(settings.name){}
+
+            error_t logName(SDFile& file){
+                return file.log(m_name);
+            }
+            error_t logValue(SDFile& file){
+                 return file.log(m_value);
+            }
+        };
+        
+
         template<std::size_t t_bufferSize, class... T_types>
         class DataLog{
         private:

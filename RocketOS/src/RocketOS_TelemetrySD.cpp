@@ -21,7 +21,7 @@ const char* SDFile::getFileName() const{
 
 error_t SDFile::setMode(SDFileModes newMode){
     if(m_mode != newMode){
-        if(newMode == SDFileModes::Record) return switchToBuffer();
+        if(newMode == SDFileModes::Buffer) return switchToBuffer();
         return switchToRecord();
     }
     return error_t::GOOD;
@@ -64,6 +64,7 @@ error_t SDFile::flushBuffer(){
     if(!m_file) return error_t::ERROR;
     m_file.print(m_buffer);
     m_currentBufferPos = m_buffer;
+    m_file.flush();
     return error_t::GOOD;
 }
 
@@ -75,6 +76,6 @@ error_t SDFile::switchToRecord(){
 
 error_t SDFile::switchToBuffer(){
     m_file.close();
-    m_mode = SDFileModes::Record;
+    m_mode = SDFileModes::Buffer;
     return error_t::GOOD;
 }

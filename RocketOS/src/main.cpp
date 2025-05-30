@@ -105,10 +105,25 @@ class Cl{
   void C2_def(const Shell::Token*){sd.begin(SdioConfig(FIFO_SDIO));}
 
 
-  void C3_function1(const Shell::Token*){Serial.println("c3f1");}
-  void C3_function2(const Shell::Token*){Serial.println("c3f2");}
-  void C3_function3(const Shell::Token*){Serial.println("c3f3");}
-  void C3_def(const Shell::Token*){Serial.println("c3d");}
+  void C3_function1(const Shell::Token*){
+    if(telemetry.newFile() != error_t::GOOD) Serial.println("error");
+  }
+  void C3_function2(const Shell::Token*){
+    if(telemetry.logLine() != error_t::GOOD) Serial.println("error");
+  }
+  void C3_function3(const Shell::Token*){
+    if(telemetry.setFileMode(Telemetry::SDFileModes::Record) != error_t::GOOD) Serial.println("error");
+  }
+  void C3_function4(Shell::arg_t){
+    if(telemetry.setFileMode(Telemetry::SDFileModes::Buffer) != error_t::GOOD) Serial.println("error");
+  }
+  void C3_function5(Shell::arg_t){
+    if(telemetry.save() != error_t::GOOD) Serial.println("error");
+  }
+  void C3_function6(Shell::arg_t){
+    if(telemetry.close() != error_t::GOOD) Serial.println("error");
+  }
+  void C3_def(const Shell::Token*){sd.begin(SdioConfig(FIFO_SDIO));}
 
 
   void C3C1_function1(const Shell::Token*){Serial.println("c3c1f1");}
@@ -139,7 +154,7 @@ class Cl{
     //child 2 command list commands-------------------
     const std::array<Shell::Command, 7> child2Commands = std::array{
       Shell::Command{"func1", "", [this](const Shell::Token* args){this->C2_function1(args);}},
-      Shell::Command{"func2", "", [this](const Shell::Token* args){this->C2_function2(args);}},
+      Shell::Command{"func2", "s", [this](const Shell::Token* args){this->C2_function2(args);}},
       Shell::Command{"func3", "", [this](const Shell::Token* args){this->C2_function3(args);}},
       Shell::Command{"func4", "", [this](const Shell::Token* args){this->C2_function4(args);}},
       Shell::Command{"func5", "", [this](const Shell::Token* args){this->C2_function5(args);}},
@@ -150,10 +165,13 @@ class Cl{
 
 
     //child 3 command list commands-------------------
-    const std::array<Shell::Command, 4> child3Commands = std::array{
-      Shell::Command{"func1", "u", [this](const Shell::Token* args){this->C3_function1(args);}},
+    const std::array<Shell::Command, 7> child3Commands = std::array{
+      Shell::Command{"func1", "", [this](const Shell::Token* args){this->C3_function1(args);}},
       Shell::Command{"func2", "", [this](const Shell::Token* args){this->C3_function2(args);}},
       Shell::Command{"func3", "", [this](const Shell::Token* args){this->C3_function3(args);}},
+      Shell::Command{"func4", "", [this](const Shell::Token* args){this->C3_function4(args);}},
+      Shell::Command{"func5", "", [this](const Shell::Token* args){this->C3_function5(args);}},
+      Shell::Command{"func6", "", [this](const Shell::Token* args){this->C3_function6(args);}},
       Shell::Command{"", "", [this](const Shell::Token* args){this->C3_def(args);}}
     };
       //child 1 (of child3) command list commands---------

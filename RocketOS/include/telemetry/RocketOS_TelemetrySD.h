@@ -11,6 +11,23 @@ namespace RocketOS{
             return error_t::ERROR;
         }
 
+        template<std::size_t t_size>
+        result_t<char*> printToBuffer(char* buffer, uint_t size, const char (&value)[t_size]){
+            uint_t targetSize = snprintf(buffer, size, "%s", value);
+            if(targetSize>size) return {buffer + size, error_t::ERROR};
+            return {buffer + targetSize, error_t::GOOD};
+        }
+
+        template<std::size_t t_size>
+        result_t<char*> printToBuffer(char* buffer, uint_t size, char (&value)[t_size]){
+            uint_t targetSize = snprintf(buffer, size, "%s", value);
+            if(targetSize>size) return {buffer + size, error_t::ERROR};
+            return {buffer + targetSize, error_t::GOOD};
+        }
+
+
+
+        
         enum class SDFileModes : uint_t{
             Record, Buffer
         };
