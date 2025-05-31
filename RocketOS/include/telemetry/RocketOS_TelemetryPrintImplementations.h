@@ -19,14 +19,14 @@ RocketOS::result_t<char*> RocketOS::Telemetry::printToBuffer<const char*>(char* 
 
 template<>
 RocketOS::result_t<char*> RocketOS::Telemetry::printToBuffer<RocketOS::int_t>(char* buffer, uint_t size, const RocketOS::int_t& value){
-    uint_t targetSize = snprintf(buffer, size, "%d", value);
+    uint_t targetSize = snprintf(buffer, size, "%d", static_cast<int>(value));
     if(targetSize>size) return {buffer + size, error_t::ERROR};
     return {buffer + targetSize, error_t::GOOD};
 }
 
 template<>
 RocketOS::result_t<char*> RocketOS::Telemetry::printToBuffer<RocketOS::uint_t>(char* buffer, uint_t size, const RocketOS::uint_t& value){
-    uint_t targetSize = snprintf(buffer, size, "%d", value);
+    uint_t targetSize = snprintf(buffer, size, "%u", static_cast<unsigned int>(value));
     if(targetSize>size) return {buffer + size, error_t::ERROR};
     return {buffer + targetSize, error_t::GOOD};
 }

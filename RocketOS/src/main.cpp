@@ -36,7 +36,16 @@ class Cl{
     Telemetry::DataLogSettings<uint_t>{b, "state"}
   };
 
-  
+  bool send = false;
+  float_t v1 = 0;
+  float_t v2 = 0;
+  void sendHIL(){
+    if(send){ 
+      Serial.printf("#%f %f\n", v1, v2);
+      v1 += 0.25;
+      v2 += 0.275;
+    }
+  }
 
 
   /*Command Callbacks
@@ -126,8 +135,8 @@ class Cl{
   void C3_def(const Shell::Token*){sd.begin(SdioConfig(FIFO_SDIO));}
 
 
-  void C3C1_function1(const Shell::Token*){Serial.println("c3c1f1");}
-  void C3C1_function2(const Shell::Token*){Serial.println("c3c1f2");}
+  void C3C1_function1(const Shell::Token*){send = false;}
+  void C3C1_function2(const Shell::Token*){send = true;}
 
   private:
   /*CommandList Construction
@@ -177,7 +186,7 @@ class Cl{
       //child 1 (of child3) command list commands---------
       const std::array<Shell::Command, 2> child3Child1Commands = std::array{
         Shell::Command{"func1", "", [this](const Shell::Token* args){this->C3C1_function1(args);}},
-        Shell::Command{"", "u", [this](const Shell::Token* args){this->C3C1_function2(args);}}
+        Shell::Command{"func2", "", [this](const Shell::Token* args){this->C3C1_function2(args);}}
       };
       //--------------------------------------------------
     //child 3 list of children
@@ -209,6 +218,9 @@ public:
   void update(){
     interpreter.handleInput();
   }
+  void test(){
+    obj.sendHIL();
+  }
 
 };
 
@@ -223,5 +235,7 @@ void setup() {
 
 void loop() {
   g_test.update();
-  delay(250);
+  delay(25);
+  g_test.test();
+  delay(25);
 }
