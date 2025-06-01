@@ -10,6 +10,13 @@
 */
 #define RocketOS_CFG_NativeWordWidth 32
 
+/*Serial Parameters
+ * These macros parameterize the serial IO of the shell. Look in the Shell README for more info about how these work.
+ * RocketOS_CFG_SerialRxBufferSize - Determines the size of the shell's input buffer and thus the maximum size of interpretable commands.
+ * 
+*/
+#define RocketOS_CFG_SerialRxBufferSize 256
+
 
 
 

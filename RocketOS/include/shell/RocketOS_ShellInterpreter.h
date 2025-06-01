@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RocketOS_ShellToken.h"
-#include "RocketOS_ShellSerial.h"
+#include "RocketOSSerial.h"
 #include "RocketOS_ShellCommandList.h"
 #include <array>
 
@@ -26,23 +26,22 @@ namespace RocketOS{
             static constexpr uint_t c_commandBufferSize = RocketOS_Shell_InterpreterCommandNameBufferSize;
             char m_commandBuffer[c_commandBufferSize];
             const CommandList* m_rootCommandList;
-            SerialInput m_inputBuffer;
+            const SerialInput& m_inputBuffer;
 		public:
             /*constructor & initialization
              * Constructor requires the root command list is provided. 
              * The root command list can be changed at runtime with setRootCommandList.
              * The init function initializes serial input and output and needs to be called before input can be processed.
             */
-			Interpreter(const CommandList*);
+			Interpreter(const SerialInput&, const CommandList*);
             void setRootCommandList(const CommandList*);
-            error_t init();
             
 			/*parsing interface 
              * The function handleInput reads any available user input into m_inputBuffer and searches for a command in the command tree defined by the m_rootCommandList.
              * If a command is found it's callback function is executed, otherwise an error message is printed.
              *
             */
-            error_t handleInput();
+            error_t readLine();
 			
 		private:
             /*helper functions
@@ -53,7 +52,6 @@ namespace RocketOS{
              * getTokenTypeFromArgCharacter - converts the data type characters ('iuswf') to their associated enum
              * printEOC - prints the character signifying the end of command execution
             */
-            error_t readLine();
             error_t interpretCommandList(const CommandList*, Token*, uint_t);
 			void reorderTokens(int_t);
 			static TokenTypes getTokenTypeFromArgCharacter(char);

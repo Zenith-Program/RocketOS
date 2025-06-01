@@ -4,8 +4,8 @@ using namespace RocketOS;
 using namespace RocketOS::Shell;
 
 //implementation of static TokenBuffer interface---------------
-SerialInput* Token::s_buffer = nullptr;
-void Token::setTokenBuffer(SerialInput* buffer) {
+const SerialInput* Token::s_buffer = nullptr;
+void Token::setTokenBuffer(const SerialInput* buffer) {
 	Token::s_buffer = buffer;
 }
 

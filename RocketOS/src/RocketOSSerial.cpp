@@ -1,4 +1,4 @@
-#include "shell\RocketOS_ShellSerial.h"
+#include "RocketOSSerial.h"
 #include <Arduino.h> //For Serial
 
 using namespace RocketOS;
@@ -8,7 +8,7 @@ SerialInput::SerialInput(uint_t baud) : m_hasData(false),  m_baud(baud) {
 }
 
 int_t SerialInput::size() const{
-    return Size;
+    return c_size;
 }
 
 char& SerialInput::operator[](int_t index){
@@ -48,10 +48,10 @@ error_t SerialInput::update(){
     if(Serial.available()){
         m_hasData = true;
         int_t i;
-        for(i = 0; i < Size && Serial.available() > 0 && Serial.peek() != '\n'; i++){
+        for(i = 0; i < c_size && Serial.available() > 0 && Serial.peek() != '\n'; i++){
             m_rxBuffer[i] = Serial.read();
         }
-        if(i==Size) i--;
+        if(i==c_size) i--;
         m_rxBuffer[i] = '\0';
     }
     return error_t::GOOD;

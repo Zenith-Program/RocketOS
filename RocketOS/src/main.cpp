@@ -47,6 +47,8 @@ class Cl{
     }
   }
 
+  Simulation::TxHIL<float_t, uint_t> simTx{a, c};
+
 
   /*Command Callbacks
   */
@@ -138,6 +140,13 @@ class Cl{
   void C3C1_function1(const Shell::Token*){send = false;}
   void C3C1_function2(const Shell::Token*){send = true;}
 
+  void C4_function1(Shell::arg_t){
+    
+  };
+  void C4_function2(Shell::arg_t){
+    simTx.sendUpdate();
+  }
+
   private:
   /*CommandList Construction
   */
@@ -191,15 +200,22 @@ class Cl{
       //--------------------------------------------------
     //child 3 list of children
     const std::array<Shell::CommandList, 1> child3ChildrenList = std::array{
-      Shell::CommandList{"Child1", child3Child1Commands.data(), child3Child1Commands.size(), nullptr, 0},
+      Shell::CommandList{"Child1", child3Child1Commands.data(), child3Child1Commands.size(), nullptr, 0}
     };
     //------------------------------------------------
+
+    //child4 command list commands--------------------
+    const std::array<Shell::Command, 2> child4Commands = std::array{
+      Shell::Command{"func1", "", [this](Shell::arg_t args){this->C4_function1(args);}},
+      Shell::Command{"func2", "", [this](Shell::arg_t args){this->C4_function2(args);}}
+    };
   
   //root command list children
-  const std::array<Shell::CommandList, 3> children = std::array{
+  const std::array<Shell::CommandList, 4> children = std::array{
     Shell::CommandList{"Child1", child1Commands.data(), child1Commands.size(), nullptr, 0},
     Shell::CommandList{"Child2", child2Commands.data(), child2Commands.size(), nullptr, 0},
-    Shell::CommandList{"Child3", child3Commands.data(), child3Commands.size(), child3ChildrenList.data(), child3ChildrenList.size()}
+    Shell::CommandList{"Child3", child3Commands.data(), child3Commands.size(), child3ChildrenList.data(), child3ChildrenList.size()},
+    Shell::CommandList{"Child4", child4Commands.data(), child4Commands.size(), nullptr, 0}
   };
 
   const Shell::CommandList m_commands = {"root", rootCommands.data(), rootCommands.size(), children.data(), children.size()};
@@ -210,13 +226,22 @@ class Cl{
 class InterpreterTest{
   Cl obj;
   Shell::Interpreter interpreter;
+  SerialInput input;
+  Simulation::RxHIL<float_t, uint8_t> rxHIL;
 public:
-  InterpreterTest() : interpreter(obj.getList()){}
+  InterpreterTest() : interpreter(input, obj.getList()), input(115200), rxHIL(input, obj.a, obj.b){}
   void init(){
-    interpreter.init();
+    input.init();
   }
   void update(){
-    interpreter.handleInput();
+    input.clear();
+    input.update();
+    while(input.hasData()){
+      interpreter.readLine();
+      rxHIL.readLine();
+      input.clear();
+      input.update();
+    }
   }
   void test(){
     obj.sendHIL();

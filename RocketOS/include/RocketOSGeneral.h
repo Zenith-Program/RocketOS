@@ -42,6 +42,19 @@ static_assert(false, "Only 8, 16, 32 & 64 bit architectures are supported");
 #endif
 #endif
 
+/*config validity checks
+ *
+ *
+ * 
+*/
+
+//RocketOS_CFG_SerialRxBufferSize check
+#ifndef RocketOS_CFG_SerialRxBufferSize
+    static_assert(false, "RocketOS_CFG_SerialRxBufferSize must be defined in the file RocketOS_Shell.cfg.h");
+#else
+    static_assert(RocketOS_CFG_SerialRxBufferSize > 0, "RocketOS_CFG_SerialRxBufferSize must be positive");
+#endif
+
 /*error handling
  *
  *

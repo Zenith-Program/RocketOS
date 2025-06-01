@@ -5,21 +5,10 @@
 using namespace RocketOS;
 using namespace RocketOS::Shell;
 
-Interpreter::Interpreter(const CommandList* root) : m_rootCommandList(root), m_inputBuffer(RocketOS_Shell_BaudRate) {}
+Interpreter::Interpreter(const SerialInput& buffer, const CommandList* root) : m_rootCommandList(root), m_inputBuffer(buffer) {}
 
 void Interpreter::setRootCommandList(const CommandList* root){
 	m_rootCommandList = root;
-}
-
-error_t Interpreter::handleInput(){
-    m_inputBuffer.clear();
-    if(m_inputBuffer.update() != error_t::GOOD) return error_t::ERROR;
-    if(m_inputBuffer.hasData()){
-        error_t code = readLine();
-        m_inputBuffer.clear();
-        return code;
-    }
-    return error_t::GOOD;
 }
 
 error_t Interpreter::readLine() {
@@ -156,10 +145,6 @@ error_t Interpreter::interpretCommandList(const CommandList* list, Token* tokens
 	command->callback(tokens+1);
 	printEOC();
 	return error_t::GOOD;
-}
-
-error_t Interpreter::init(){
-    return m_inputBuffer.init();
 }
 
 void Interpreter::reorderTokens(int_t numTokens) {

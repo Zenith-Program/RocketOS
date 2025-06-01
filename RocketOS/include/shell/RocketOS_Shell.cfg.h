@@ -5,16 +5,6 @@
  * Look at the README file in this directory for more info.
 */
 
-
-/*Serial Parameters
- * These macros parameterize the serial IO of the shell. Look in the Shell README for more info about how these work.
- * RocketOS_Shell_SerialRxBufferSize - Determines the size of the shell's input buffer and thus the maximum size of interpretable commands.
- * RocketOS_Shell_BaudRate - Serial baud rate for the shell. The baud rate of your computer's serial program must match this.
- * 
-*/
-#define RocketOS_Shell_SerialRxBufferSize 256
-#define RocketOS_Shell_BaudRate 115200
-
 /*Interpreter Parameters
  * These macros parameterize the input interpreter of the shell. Look in the Shell README for more info about how these work.
  * Macros:

@@ -1,6 +1,6 @@
 #pragma once
 #include "RocketOS_ShellGeneral.h"
-#include "RocketOS_ShellSerial.h"
+#include "RocketOSSerial.h"
 
 namespace RocketOS{
     namespace Shell{
@@ -49,7 +49,7 @@ namespace RocketOS{
 		*/
 		TokenData m_data;
 		uint_t m_interpretations;
-		static SerialInput* s_buffer;
+		static const SerialInput* s_buffer;
 	public:
 		/*Command Interface----------
 		 * Use these functions to get argument data from the token.
@@ -69,7 +69,7 @@ namespace RocketOS{
 		bool extract(int_t&);
 		bool hasInterpretation(TokenTypes) const;
 		error_t setInterpretation(TokenTypes);
-		static void setTokenBuffer(SerialInput*);
+		static void setTokenBuffer(const SerialInput*);
 		
 	private:
 		/*Implementation details

@@ -1,5 +1,5 @@
 #pragma once
-#include "RocketOS_ShellGeneral.h"
+#include "RocketOSGeneral.h"
 
 /*SerialInput class
  * This class is used to handle serial inputs for the shell. 
@@ -10,8 +10,8 @@
 
 namespace RocketOS{
     class SerialInput{
-        static constexpr int_t Size = RocketOS_Shell_SerialRxBufferSize;
-        char m_rxBuffer[Size];
+        static constexpr int_t c_size = RocketOS_CFG_SerialRxBufferSize;
+        char m_rxBuffer[c_size];
         bool m_hasData;
         uint_t m_baud;
     public:
