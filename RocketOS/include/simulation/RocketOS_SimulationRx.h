@@ -24,7 +24,7 @@ namespace RocketOS{
                 uint_t bufferIndex = 1;
                 for(uint_t i=0; i<readValues.size() && error == error_t::GOOD; i++){
                     result_t<float_t> result = parseFloat(bufferIndex);
-                    error = result.error;
+                    if(result.error != error_t::GOOD) error = result.error;
                     readValues[i] = result.data;
                 }
                 if(error != error_t::GOOD) return;
