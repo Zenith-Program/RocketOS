@@ -1,5 +1,5 @@
 classdef SerialTransmitter < matlab.System
-    properties (Nontunable)
+    properties
         Port = "COM3";
         BaudRate = 115200;
         NumSignals = 1;
@@ -13,15 +13,12 @@ classdef SerialTransmitter < matlab.System
     methods(Access = protected)
         function setupImpl(obj)
             obj.sObj = serialport(obj.Port, obj.BaudRate);
-            obj.format = "#%f";
-            for(i=1:obj.NumSignals-1)
-                obj.format = strcat(obj.format, " %f");
-            end
+            obj.format = ""
         end
 
         function stepImpl(obj, dataVec)
             if ~isempty(dataVec)
-                formatted = sprintf(obj.format, dataVec);
+                formatted = sprintf('#%g ', dataVec);
                 writeline(obj.sObj, strtrim(formatted)); % adds \n
             end
         end

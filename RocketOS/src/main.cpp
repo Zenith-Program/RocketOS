@@ -40,11 +40,10 @@ class Cl{
   float_t v1 = 0;
   float_t v2 = 0;
   void sendHIL(){
-    if(send){ 
-      Serial.printf("#%f %f\n", v1, v2);
-      v1 += 0.25;
-      v2 += 0.275;
-    }
+    a += 0.075;
+    c += 1;
+    simTx.sendUpdate();
+    if(c%100 == 0) Serial.println("test1\ntest2");
   }
 
   Simulation::TxHIL<float_t, uint_t> simTx{a, c};
@@ -244,7 +243,7 @@ public:
     }
   }
   void test(){
-    obj.sendHIL();
+    //obj.sendHIL();
   }
 
 };

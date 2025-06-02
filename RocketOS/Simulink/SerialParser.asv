@@ -48,12 +48,8 @@ classdef SerialParser < matlab.System
             end
             %do Tx
             message = "#";
-            for(i=1:obj.NumValuesTx)
-                message = strcat(message, sprintf("%f", dataVec(i)));
-                message = strcat(message, " ");
-            end
-            %writeline(obj.sObj, message);
-            %flush(obj.sObj);
+            message = strcat
+            writeline(obj.sObj, "");
         end
 
         function resetImpl(obj)
