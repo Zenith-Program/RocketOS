@@ -47,12 +47,7 @@ error_t SerialInput::init(){
 error_t SerialInput::update(){
     if(Serial.available()){
         m_hasData = true;
-        int_t i;
-        for(i = 0; i < c_size && Serial.available() > 0 && Serial.peek() != '\n'; i++){
-            m_rxBuffer[i] = Serial.read();
-        }
-        if(i==c_size) i--;
-        m_rxBuffer[i] = '\0';
+        Serial.readBytesUntil('\n', m_rxBuffer, c_size);
     }
     return error_t::GOOD;
 }

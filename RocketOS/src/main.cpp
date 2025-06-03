@@ -14,6 +14,7 @@ class Cl{
   }
 
   float_t a;
+  float_t d;
   uint8_t b;
   uint_t c;
   std::array<char, 20> name;
@@ -40,10 +41,9 @@ class Cl{
   float_t v1 = 0;
   float_t v2 = 0;
   void sendHIL(){
-    a += 0.075;
-    c += 1;
+    a = d + 0.25;
+    c += b;
     simTx.sendUpdate();
-    if(c%100 == 0) Serial.println("test1\ntest2");
   }
 
   Simulation::TxHIL<float_t, uint_t> simTx{a, c};
@@ -228,7 +228,7 @@ class InterpreterTest{
   SerialInput input;
   Simulation::RxHIL<float_t, uint8_t> rxHIL;
 public:
-  InterpreterTest() : interpreter(input, obj.getList()), input(115200), rxHIL(input, obj.a, obj.b){}
+  InterpreterTest() : interpreter(input, obj.getList()), input(115200), rxHIL(input, obj.d, obj.b){}
   void init(){
     input.init();
   }
@@ -243,7 +243,7 @@ public:
     }
   }
   void test(){
-    //obj.sendHIL();
+    obj.sendHIL();
   }
 
 };
