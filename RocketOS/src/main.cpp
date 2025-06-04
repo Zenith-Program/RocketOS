@@ -19,6 +19,10 @@ class Cl{
   uint_t c;
   std::array<char, 20> name;
 
+  float_t input;
+  float_t output;
+  float_t gain;
+
 
   Persistent::EEPROMBackup<float_t, uint8_t, uint_t, std::array<char, 20>> eeprom{
     Persistent::EEPROMSettings<float_t>{a, 0.5, "helloWorld"},
@@ -41,12 +45,11 @@ class Cl{
   float_t v1 = 0;
   float_t v2 = 0;
   void sendHIL(){
-    a = d + 0.25;
-    c += b;
+    output = -gain * input;
     simTx.sendUpdate();
   }
 
-  Simulation::TxHIL<float_t, uint_t> simTx{a, c};
+  Simulation::TxHIL<float_t, float_t> simTx{output, input};
 
 
   /*Command Callbacks
@@ -150,11 +153,16 @@ class Cl{
   /*CommandList Construction
   */
  //root command list commands------------------------
-  const std::array<Shell::Command, 4> rootCommands = std::array{  
+  const std::array<Shell::Command, 5> rootCommands = std::array{  
     Shell::Command{"func1", "", [this](Shell::arg_t args){this->function1(args);}},
     Shell::Command{"func2", "", [this](const Shell::Token* args){this->function2(args);}},
     Shell::Command{"func3", "", [this](const Shell::Token* args){this->function3(args);}},
-    Shell::Command{"func4", "f", [this](const Shell::Token* args){this->function4(args);}}
+    Shell::Command{"func4", "f", [this](const Shell::Token* args){this->function4(args);}},
+    Shell::Command{"setGain", "f", [this](Shell::arg_t args){
+      float_t newGain = args[0].getFloatData();
+      gain = newGain;
+    }
+  }
   };
     //child 1 command list commands-------------------
     const std::array<Shell::Command, 7> child1Commands = std::array{
@@ -226,9 +234,9 @@ class InterpreterTest{
   Cl obj;
   Shell::Interpreter interpreter;
   SerialInput input;
-  Simulation::RxHIL<float_t, uint8_t> rxHIL;
+  Simulation::RxHIL<float_t> rxHIL;
 public:
-  InterpreterTest() : interpreter(input, obj.getList()), input(115200), rxHIL(input, obj.d, obj.b){}
+  InterpreterTest() : interpreter(input, obj.getList()), input(115200), rxHIL(input, obj.input){}
   void init(){
     input.init();
   }

@@ -12,9 +12,8 @@ BAUDRATE = 115200
 SIMULINK_IP = '127.0.0.1'
 SIMULINK_RECV_PORT = 25001      # Simulink → Python
 SIMULINK_SEND_PORT = 25000      # Python → Simulink
-FLOAT_COUNT_RX = 2              # Number of doubles Simulink sends
+FLOAT_COUNT_RX = 1              # Number of doubles Simulink sends
 FLOAT_COUNT_TX = 2              # Number of doubles Teensy sends
-UDP_SEND_RATE_HZ = 20           # How often to send to Teensy
 # ======================
 
 # === SHARED QUEUES ===
@@ -39,7 +38,7 @@ udp_send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # === THREAD FUNCTIONS ===
 
 def serial_read_thread():
-    """Reads from Teensy and routes HIL or shell responses"""
+    # """Reads from Teensy and routes HIL or shell responses"""
     buffer = ""
     while not stop_event.is_set():
         try:
@@ -61,12 +60,11 @@ def serial_read_thread():
                     print(f"[Teensy] {line}")
         except Exception as e:
             print(f"[ERROR] Serial read: {e}")
-            #stop_event.set()
-print("[serial read] Thread exiting.")
+            stop_event.set()
 
 
 def serial_write_thread():
-    """Sends user commands and HIL updates to Teensy"""
+    # """Sends user commands and HIL updates to Teensy"""
     while not stop_event.is_set():
         try:
             # Prefer HIL data if available
@@ -85,15 +83,13 @@ def serial_write_thread():
             except queue.Empty:
                 pass
 
-            time.sleep(1 / UDP_SEND_RATE_HZ)
         except Exception as e:
             print(f"[ERROR] Serial write: {e}")
-            #stop_event.set()
-    print("[serial write] Thread exiting.")
+            stop_event.set()
 
 
 def simulink_receive_thread():
-    """Receives UDP packets from Simulink and pushes to Teensy"""
+    # """Receives UDP packets from Simulink and pushes to Teensy"""
     while not stop_event.is_set():
         try:
             data, _ = udp_recv_sock.recvfrom(8 * FLOAT_COUNT_RX)
@@ -106,12 +102,11 @@ def simulink_receive_thread():
             continue
         except Exception as e:
             print(f"[ERROR] Simulink receive: {e}")
-            #stop_event.set()
-    print("[simulink_recive] Thread exiting.")
+            stop_event.set()
 
 
 def simulink_send_thread():
-    """Sends latest HIL data to Simulink"""
+    # """Sends latest HIL data to Simulink"""
     while not stop_event.is_set():
         try:
             data = hil_to_simulink.get(timeout=0.1)
@@ -121,12 +116,11 @@ def simulink_send_thread():
             continue
         except Exception as e:
             print(f"[ERROR] Simulink send: {e}")
-            #stop_event.set()
-    print("[simulink_send] Thread exiting.")
+            stop_event.set()
 
 
 def user_input_thread():
-    """Accepts user input while everything runs"""
+    # """Accepts user input while everything runs"""
     while not stop_event.is_set():
         try:
             cmd = input()
@@ -136,8 +130,7 @@ def user_input_thread():
                 user_commands.put(cmd)
         except Exception as e:
             print(f"[ERROR] Input thread: {e}")
-            #stop_event.set()
-    print("[UI] Thread exiting.")
+            stop_event.set()
 
 
 # === START THREADS ===
@@ -148,13 +141,14 @@ threads = [
     threading.Thread(target=simulink_send_thread, daemon=True),
     threading.Thread(target=user_input_thread, daemon=True),
 ]
+print("Simulation starting up...")
 
 for t in threads:
     t.start()
 
-print("HIL bridge running. Type shell commands below.")
+print("Simulation startup complete. Type commands here. Use @quit to end the simulation.")
 
-# Keep main thread alive
+# Keep main thread alive durring simulation
 try:
     while not stop_event.is_set():
         time.sleep(0.1)
@@ -162,15 +156,12 @@ except KeyboardInterrupt:
     print("Keyboard interrupt detected.")
     stop_event.set()
 
-print("Program Ending")
+#Shut down the program
+print("Simulation Shutting Down...")
 for t in threads:
     t.join()
-    print("joined")
-print("Threads Joined")
 ser.close()
-print("Serial Closed")
 udp_send_sock.close()
-print("udp Tx closed")
 udp_recv_sock.close()
-print("udp Rx closed")
+print("Simulation Shut Down Complete")
 sys.exit(0)

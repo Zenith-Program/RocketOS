@@ -1,0 +1,68 @@
+classdef BytesToFloats < matlab.System
+
+    properties (Nontunable)
+        NumValues = 1;
+    end
+
+    methods(Access = protected)
+        function setupImpl(obj)
+            
+        end
+
+        function floatValues = stepImpl(obj, bytes)
+            floatValues = zeros(1,numFloats,'double');
+            if(length(bytes) == 8*numFloats)
+                floatValues = typecast(uint8(bytes), 'double');
+            end
+            end 
+        end
+
+        function resetImpl(obj)
+            obj.lastValues = zeros(1, obj.NumValuesRx);
+        end
+
+        function releaseImpl(obj)
+            clear obj.sObj;
+        end
+
+        function out = getOutputSizeImpl(obj)
+            out = [1 obj.NumValues]; 
+        end
+
+        function out = getOutputDataTypeImpl(obj)
+            out = "double";
+        end
+
+        function out = isOutputComplexImpl(obj)
+            out = false;
+        end
+
+        function out = isOutputFixedSizeImpl(obj)
+            out = true;
+        end
+
+        function num = getNumInputsImpl(obj)
+            num = 1;
+        end
+
+        function out = getInputNamesImpl(obj)
+            out = 'bytes';
+        end
+
+        function out = isInputFixedSizeImpl(obj)
+            out = true;
+        end
+
+        function out = isInputComplexImpl(obj)
+            out = false;
+        end
+
+        function out = getInputSizeImpl(obj)
+            out = [1 8*obj.NumValues];
+        end
+
+        function out = getInputDataTypeImpl(obj)
+            out = "uint8";
+        end
+    end
+end
