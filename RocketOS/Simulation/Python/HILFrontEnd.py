@@ -7,7 +7,7 @@ import time
 import sys
 
 # === CONFIGURATION ===
-SERIAL_PORT = 'COM3'            # Your Teensy COM port
+SERIAL_PORT = 'COM5'            # Your Teensy COM port
 BAUDRATE = 115200
 SIMULINK_IP = '127.0.0.1'
 SIMULINK_RECV_PORT = 25001      # Simulink → Python
