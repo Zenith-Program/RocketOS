@@ -114,9 +114,11 @@ def simulink_send_thread():
     """Sends latest HIL data to Simulink"""
     while not stop_event.is_set():
         try:
-            data = hil_to_simulink.get()
+            data = hil_to_simulink.get(timeout=0.1)
             payload = struct.pack(f'<{FLOAT_COUNT_TX}d', *data)
             udp_send_sock.sendto(payload, (SIMULINK_IP, SIMULINK_SEND_PORT))
+        except queue.Empty:
+            continue
         except Exception as e:
             print(f"[ERROR] Simulink send: {e}")
             #stop_event.set()
