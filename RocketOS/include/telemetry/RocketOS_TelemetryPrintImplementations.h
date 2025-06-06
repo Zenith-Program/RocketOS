@@ -3,6 +3,7 @@
 #include "RocketOS_TelemetrySD.h"
 #include <cstring>
 
+/*
 template<>
 RocketOS::result_t<char*> RocketOS::Telemetry::printToBuffer<char*>(char* buffer, uint_t size, char* const& value){
     uint_t targetSize = snprintf(buffer, size, "%s", value);
@@ -37,3 +38,4 @@ RocketOS::result_t<char*> RocketOS::Telemetry::printToBuffer<RocketOS::float_t>(
     if(targetSize>size) return {buffer + size, error_t::ERROR};
     return {buffer + targetSize, error_t::GOOD};
 }
+*/

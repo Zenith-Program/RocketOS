@@ -79,3 +79,34 @@ error_t SDFile::switchToBuffer(){
     m_mode = SDFileModes::Buffer;
     return error_t::GOOD;
 }
+
+//implementation of printFunctions
+result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, char* const& value){
+    uint_t targetSize = snprintf(buffer, size, "%s", value);
+    if(targetSize>size) return {buffer + size, error_t::ERROR};
+    return {buffer + targetSize, error_t::GOOD};
+}
+
+result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, const char* const& value){
+    uint_t targetSize = snprintf(buffer, size, "%s", value);
+    if(targetSize>size) return {buffer + size, error_t::ERROR};
+    return {buffer + targetSize, error_t::GOOD};
+}
+
+result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, const int_t& value){
+    uint_t targetSize = snprintf(buffer, size, "%d", static_cast<int>(value));
+    if(targetSize>size) return {buffer + size, error_t::ERROR};
+    return {buffer + targetSize, error_t::GOOD};
+}
+
+result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, const uint_t& value){
+    uint_t targetSize = snprintf(buffer, size, "%d", static_cast<int>(value));
+    if(targetSize>size) return {buffer + size, error_t::ERROR};
+    return {buffer + targetSize, error_t::GOOD};
+}
+
+result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, const float_t& value){
+    uint_t targetSize = snprintf(buffer, size, "%f", value);
+    if(targetSize>size) return {buffer + size, error_t::ERROR};
+    return {buffer + targetSize, error_t::GOOD};
+}

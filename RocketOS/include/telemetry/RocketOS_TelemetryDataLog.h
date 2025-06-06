@@ -55,7 +55,7 @@ namespace RocketOS{
                 return m_file.setMode(mode);
             }
 
-            error_t save(){
+            error_t flush(){
                 return m_file.flush();
             }
 

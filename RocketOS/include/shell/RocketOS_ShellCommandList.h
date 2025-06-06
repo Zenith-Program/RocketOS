@@ -100,7 +100,7 @@ namespace RocketOS{
             const char* getName() const;
             void printLocalCommands() const;
             void printAllCommands(uint_t=0) const;
-
+        private:
             /*Helper functions
              * printIndent - prints n tabs. Used for recursively printing the command tree
              *

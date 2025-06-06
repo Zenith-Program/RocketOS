@@ -5,28 +5,28 @@
 namespace RocketOS{
     namespace Telemetry{
 
-        template<class T>
-        result_t<char*> printToBuffer(char*, uint_t, const T&){
-            static_assert(sizeof(T) == 0, "printToBuffer<T> not implemented for this type");
-            return error_t::ERROR;
-        }
+        struct PrintFunctions{
+            template<std::size_t t_size>
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, const char (&value)[t_size]){
+                uint_t targetSize = snprintf(buffer, size, "%s", value);
+                if(targetSize>size) return {buffer + size, error_t::ERROR};
+                return {buffer + targetSize, error_t::GOOD};
+            }
 
-        template<std::size_t t_size>
-        result_t<char*> printToBuffer(char* buffer, uint_t size, const char (&value)[t_size]){
-            uint_t targetSize = snprintf(buffer, size, "%s", value);
-            if(targetSize>size) return {buffer + size, error_t::ERROR};
-            return {buffer + targetSize, error_t::GOOD};
-        }
+            template<std::size_t t_size>
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, char (&value)[t_size]){
+                uint_t targetSize = snprintf(buffer, size, "%s", value);
+                if(targetSize>size) return {buffer + size, error_t::ERROR};
+                return {buffer + targetSize, error_t::GOOD};
+            }
 
-        template<std::size_t t_size>
-        result_t<char*> printToBuffer(char* buffer, uint_t size, char (&value)[t_size]){
-            uint_t targetSize = snprintf(buffer, size, "%s", value);
-            if(targetSize>size) return {buffer + size, error_t::ERROR};
-            return {buffer + targetSize, error_t::GOOD};
-        }
-
-
-
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, char* const& value);
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, const char* const& value);
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, const int_t& value);
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, const uint_t& value);
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, const float_t& value);
+        };
+        
         
         enum class SDFileModes : uint_t{
             Record, Buffer
@@ -67,7 +67,7 @@ namespace RocketOS{
                     return error_t::GOOD;
                 } 
                 uint_t remainingSpace = (m_buffer + m_bufferSize) - m_currentBufferPos;
-                auto result = printToBuffer(m_currentBufferPos, remainingSpace, value);
+                auto result = PrintFunctions::printToBuffer(m_currentBufferPos, remainingSpace, value);
                 m_currentBufferPos = result.data;
                 return result.error;
             }

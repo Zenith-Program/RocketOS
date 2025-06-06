@@ -38,6 +38,7 @@ void SerialInput::copy(char* newBuffer, int_t start, int_t stop) const{
 
 error_t SerialInput::init(){
     Serial.begin(m_baud);
+    Serial.setTimeout(10);
     while(!Serial) {
         delay(10);
     }
@@ -47,7 +48,8 @@ error_t SerialInput::init(){
 error_t SerialInput::update(){
     if(Serial.available()){
         m_hasData = true;
-        Serial.readBytesUntil('\n', m_rxBuffer, c_size);
+        Serial.readBytesUntil('\r', m_rxBuffer, c_size);
+        if(Serial.available() && Serial.peek() == '\n') Serial.read();
     }
     return error_t::GOOD;
 }

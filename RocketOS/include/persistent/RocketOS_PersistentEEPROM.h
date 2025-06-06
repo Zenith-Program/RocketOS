@@ -58,6 +58,12 @@ namespace RocketOS{
                 return {true, error};
             }
 
+            error_t restoreDefaults(){
+                error_t error = makeAllDefault(std::make_index_sequence<c_size>());
+                error = (saveHash(hash()) == error_t::GOOD && error == error_t::GOOD)? error_t::GOOD : error_t::ERROR;
+                return error;
+            }
+
             error_t save(){
                 return saveAll(std::make_index_sequence<c_size>());
             }

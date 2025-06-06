@@ -62,8 +62,8 @@ TARGET_TO_SIM_COUNT = config["Values_Sent_Target_To_Simulink"]
 # ======================
 
 # === SHARED QUEUES ===
-hil_to_simulink = queue.Queue()
-simulink_to_teensy = queue.Queue()
+target_to_simulink = queue.Queue()
+simulink_to_target = queue.Queue()
 user_commands = queue.Queue()
 
 # === EXIT EVENT ===
@@ -89,7 +89,7 @@ if not stop_event.isSet():
 # === THREAD FUNCTIONS ===
 
 def serial_read_thread():
-    # """Reads from Teensy and routes HIL or shell responses"""
+    # Reads from Target and routes HIL or shell responses
     buffer = ""
     while not stop_event.is_set():
         try:
@@ -97,40 +97,39 @@ def serial_read_thread():
             buffer += data
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
-                line = line.strip()
-                if line.startswith('#'):
+                stripedline = line.strip()
+                if stripedline.startswith('#'):
                     try:
-                        nums = list(map(float, line[1:].strip().split()))
+                        nums = list(map(float, stripedline[1:].strip().split()))
                         if len(nums) == TARGET_TO_SIM_COUNT:
-                            hil_to_simulink.put(nums)
+                            target_to_simulink.put(nums)
                         else:
-                            print(f"[WARNING] Size mismatch in HIL packet from target: {line}")
+                            print(f"[WARNING] Size mismatch in HIL packet from target: {stripedline}")
                     except ValueError:
-                        print(f"[WARNING] Could not parse HIL packet from target: {line}")
+                        print(f"[WARNING] Could not parse HIL packet from target: {stripedline}")
                 else:
-                    print(f'[TARGET] {line}')
+                    print(line)
         except Exception as e:
             print(f"[ERROR] Serial read: {e}")
             stop_event.set()
 
-
 def serial_write_thread():
-    # """Sends user commands and HIL updates to Teensy"""
+    # Sends user commands and HIL updates to Target
     while not stop_event.is_set():
         try:
-            # Prefer HIL data if available
+            # Send HIL data to target if available
             try:
-                hil_packet = simulink_to_teensy.get_nowait()
-                msg = '#' + ' '.join(f'{x:.10g}' for x in hil_packet) + '\n'
+                hil_packet = simulink_to_target.get_nowait()
+                msg = '#' + ' '.join(f'{x:.10g}' for x in hil_packet) + '\r'
                 ser.write(msg.encode('utf-8'))
             except queue.Empty:
                 pass
 
-            # Also handle user input
+            # Send user commands to target
             try:
                 cmd = user_commands.get_nowait()
                 if cmd.startswith('>'):
-                    ser.write((cmd.strip() + '\n').encode('utf-8'))
+                    ser.write((cmd.strip() + '\r').encode('utf-8'))
             except queue.Empty:
                 pass
 
@@ -140,7 +139,7 @@ def serial_write_thread():
 
 
 def simulink_receive_thread():
-    # """Receives UDP packets from Simulink and pushes to Teensy"""
+    # Receives UDP packets from Simulink and pushes to Target
     while not stop_event.is_set():
         try:
             data, _ = udp_recv_sock.recvfrom(8 * SIM_TO_TARGET_COUNT)
@@ -148,7 +147,7 @@ def simulink_receive_thread():
                 print(f"[WARNING] Wrong data size from Simulink: {len(data)}")
                 continue
             floats = struct.unpack(f'<{SIM_TO_TARGET_COUNT}d', data)
-            simulink_to_teensy.put(floats)
+            simulink_to_target.put(floats)
         except socket.timeout:
             continue
         except Exception as e:
@@ -157,10 +156,10 @@ def simulink_receive_thread():
 
 
 def simulink_send_thread():
-    # """Sends latest HIL data to Simulink"""
+    # Sends latest HIL data to Simulink
     while not stop_event.is_set():
         try:
-            data = hil_to_simulink.get(timeout=0.1)
+            data = target_to_simulink.get(timeout=0.1)
             payload = struct.pack(f'<{TARGET_TO_SIM_COUNT}d', *data)
             udp_send_sock.sendto(payload, (SIMULINK_IP, SIMULINK_PORT))
         except queue.Empty:
@@ -171,11 +170,11 @@ def simulink_send_thread():
 
 
 def user_input_thread():
-    # """Accepts user input while everything runs"""
+    # Accepts user input while everything runs
     while not stop_event.is_set():
         try:
             cmd = input()
-            if(cmd.strip() == "@quit"):
+            if(cmd.strip() == "quit" or cmd.strip() == "exit"):
                 stop_event.set()
             else:
                 user_commands.put(cmd)
@@ -192,12 +191,12 @@ if not stop_event.is_set():
         threading.Thread(target=simulink_send_thread, daemon=True),
         threading.Thread(target=user_input_thread, daemon=True),
     ]
-    print("[INFO] Simulation starting up...")
+    print("[INFO] Simulation bridge starting up...")
 
     for t in threads:
         t.start()
 
-    print("[INFO] Simulation startup complete. Type commands here. Use @quit to end the simulation.")
+    print("[INFO] Simulation bridge startup complete. Type commands here. Use 'quit' or 'exit' to end the simulation bridge.")
 
     # Keep main thread alive durring simulation
     try:
@@ -208,12 +207,12 @@ if not stop_event.is_set():
         stop_event.set()
 
     #Shut down the program
-    print("[INFO] Simulation Shutting Down...")
+    print("[INFO] Simulation bridge shutting down...")
     for t in threads:
         t.join()
     ser.close()
     udp_send_sock.close()
     udp_recv_sock.close()
 
-print("[INFO] Simulation Shut Down Complete.")
+print("[INFO] Simulation bridge shut down complete.")
 sys.exit(0)

@@ -5,6 +5,16 @@
  * Look at the README in this directory for more info
 */
 
+/*included modules
+ *
+ *
+ * 
+*/
+#define RocketOS_CFG_HasShell
+#define RocketOS_CFG_HasPersistent
+#define RocketOS_CFG_HasTelemetry
+#define RocketOS_CFG_HasSimulation
+
 /*Architecure Type
  * 
 */
