@@ -4,5 +4,5 @@
 .vscode/launch.json
 .vscode/ipch
 Simulation/Python/HILBridge.cfg
-Simulation/Simulink/slprj
+Simulation/Simulink/slprj/
 Simulation/Simulink/HILSimulation.slxc
