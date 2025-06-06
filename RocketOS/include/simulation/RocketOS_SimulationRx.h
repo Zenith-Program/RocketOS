@@ -37,35 +37,58 @@ namespace RocketOS{
                 ((std::get<t_indexSeq>(m_values) = static_cast<T_types>(std::get<t_indexSeq>(arr))), ...);
             }
 
-            result_t<float_t> parseFloat(uint_t& bufferLocaion){
+            result_t<float_t> parseFloat(uint_t& bufferLocation){
                 const uint_t bufferSize = static_cast<uint_t>(m_inputBuffer.size());
-                skipWhitespace(bufferLocaion);
+                skipWhitespace(bufferLocation);
                 bool negative = false;
-                if(m_inputBuffer[bufferLocaion] == '-'){
+                if(m_inputBuffer[bufferLocation] == '-'){
                     negative = true;
-                    bufferLocaion++;
+                    bufferLocation++;
                 }
-                uint_t endOfWholePart;
-                //find the ones place
-                for(endOfWholePart = bufferLocaion; endOfWholePart < bufferSize && isNumeric(m_inputBuffer[endOfWholePart]); endOfWholePart++);
-                if(endOfWholePart == bufferLocaion) return error_t::ERROR; //empty whole part (no numeric characters)
-                //find value of whole part
-                float_t value = 0;
-                for(uint_t i=0; i<(endOfWholePart - bufferLocaion); i++){
-                    value += powTen(i) * getNumber(m_inputBuffer[endOfWholePart - i - 1]);
-                }
-                bufferLocaion = endOfWholePart;
+                auto result = parseInteger(bufferLocation);
+                if(result.error != error_t::GOOD) return result.error;
+                float_t value = result.data;
                 //add value of decimal part if it exists
-                if(endOfWholePart < bufferSize && m_inputBuffer[bufferLocaion] == '.'){
-                    bufferLocaion++; //skip decimal point
+                if(bufferLocation < bufferSize && m_inputBuffer[bufferLocation] == '.'){
+                    bufferLocation++; //skip decimal point
                     uint_t i;
-                    for(i=0; i + bufferLocaion<bufferSize && isNumeric(m_inputBuffer[i + bufferLocaion]); i++){
-                        value += powTen(-(i+1)) * getNumber(m_inputBuffer[bufferLocaion + i]);
+                    for(i=0; i + bufferLocation<bufferSize && isNumeric(m_inputBuffer[i + bufferLocation]); i++){
+                        value += powTen(-(i+1)) * getNumber(m_inputBuffer[bufferLocation + i]);
                     }
                     if(i == 0) return error_t::ERROR; //no decimal part after the decimal point (no numeric characters after the decimal)
-                    bufferLocaion += i;
+                    bufferLocation += i;
+                }
+                //handle scientific notation case
+                if(bufferLocation < bufferSize && m_inputBuffer[bufferLocation] == 'e'){
+                    bufferLocation++; //skip e character
+                    if(bufferLocation >= bufferSize) return error_t::ERROR; //empty after e character
+                    bool negativeExponent = false;
+                    if(m_inputBuffer[bufferLocation] == '-'){
+                         negativeExponent = true;
+                         bufferLocation++;
+                    }
+                    auto result = parseInteger(bufferLocation);
+                    if(result.error != error_t::GOOD) return result.error;
+                    int_t exponentValue = result.data;
+                    if(negativeExponent) exponentValue *= -1;
+                    value *= pow10(exponentValue);
                 }
                 if(negative) value = -value;
+                return value;
+            }
+
+            result_t<uint_t> parseInteger(uint_t& bufferLocation){
+                const uint_t bufferSize = static_cast<uint_t>(m_inputBuffer.size());
+                //find the ones place
+                uint_t endOfWholePart;
+                for(endOfWholePart = bufferLocation; endOfWholePart < bufferSize && isNumeric(m_inputBuffer[endOfWholePart]); endOfWholePart++);
+                if(endOfWholePart == bufferLocation) return error_t::ERROR; //empty whole part (no numeric characters)
+                //find value of whole part
+                uint_t value = 0;
+                for(uint_t i=0; i<(endOfWholePart - bufferLocation); i++){
+                    value += powTenU(i) * getNumberU(m_inputBuffer[endOfWholePart - i - 1]);
+                }
+                bufferLocation = endOfWholePart;
                 return value;
             }
 
@@ -102,6 +125,19 @@ namespace RocketOS{
             static float_t getNumber(const char c){
                 return static_cast<float_t>(c - '0');
             }
+
+            static uint_t powTenU(uint_t n){
+                float_t value = 1;
+                for (uint_t i = 0; i < n; i++)
+                    value *= 10;
+                return value;
+            }
+
+            static uint_t getNumberU(const char c){
+                return static_cast<uint_t>(c - '0');
+            }
+
+            
         };
     }
 }
