@@ -10,24 +10,40 @@ using namespace RocketOS::Simulation;
 
 
 Application::Application() : 
-m_telemetry(m_sdCard, 
+//telemetry systems
+m_telemetry("telemetry", m_sdCard, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
     DataLogSettings<float_t>{m_sharedVariables.altitude, "altitude"}, 
     DataLogSettings<float_t>{m_sharedVariables.deployment, "deployment"},
     DataLogSettings<float_t>{m_sharedVariables.gain, "gain"}
-), 
-m_telemetryRefreshPeriod(Airbrakes_CFG_TelemetryRefreshPeriod_ms),
-m_doLogging(false),
-m_log(m_sdCard, m_logBuffer.data(), m_logBuffer.size()),
-c_logCommands(m_log, "log"),
-m_persistent(
-    EEPROMSettings<float_t>{m_sharedVariables.gain, 0, "gain"}
 ),
-c_persistentCommands(m_persistent, "persistent"),
+m_doLogging(false),
+m_log("log", m_sdCard, Airbrakes_CFG_DefaultLogFile),
+
+//persistent systems
+m_persistent("persistent",
+    EEPROMSettings<float_t>{m_sharedVariables.gain, 0, "gain"},
+    EEPROMSettings<TelemetryFileName_t>{m_log.getNameBufferRef(), "log.txt", "log file name"},
+    EEPROMSettings<TelemetryFileName_t>{m_telemetry.getNameBufferRef(), "telemetry.csv", "telemetry file name"},
+    EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), 100, "telemetry refresh"},
+    EEPROMSettings<bool>{m_HILEnabled, false, "simulation mode"},
+    EEPROMSettings<uint_t>{m_HILRefreshPeriod, 10, "simulation refresh"}
+),
+
+//serial systems
 m_inputBuffer(115200),
-m_TxHIL(m_sharedVariables.deployment, m_sharedVariables.altitude),
-m_RxHIL(m_inputBuffer, m_sharedVariables.altitude),
+
+//simulation systems
+m_TxHIL(
+    m_sharedVariables.deployment, 
+    m_sharedVariables.altitude
+),
+m_RxHIL(m_inputBuffer, 
+    m_sharedVariables.altitude
+),
 m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
 m_HILEnabled(false),
+
+//shell systems
 m_interpreter(m_inputBuffer, &c_root){}
 
 
@@ -78,8 +94,8 @@ void Application::updateBackground(){
          m_serialRefresh = 0;
     }
     //make telemetry log
-    if(m_doLogging && m_telemetryRefresh > m_telemetryRefreshPeriod){
+    if(m_doLogging && m_telemetry.isRefreshed()){
         m_telemetry.logLine();
-        m_telemetryRefresh = 0;
+        m_telemetry.clearRefresh();
     }
 }

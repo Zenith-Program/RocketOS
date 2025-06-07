@@ -18,7 +18,7 @@ namespace RocketOS{
             RxHIL(const SerialInput& buffer, T_types&... values) : m_values(values...), m_inputBuffer(buffer) {}
 
             void readLine(){
-                std::array<float_t, c_size> readValues;
+                std::array<float_t, c_size> readValues = {};
                 error_t error = error_t::GOOD;
                 if(m_inputBuffer[0] != '#') return;
                 uint_t bufferIndex = 1;

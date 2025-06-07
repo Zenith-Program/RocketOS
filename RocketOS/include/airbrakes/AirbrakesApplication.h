@@ -1,11 +1,14 @@
 #pragma once
 #include "AirbrakesGeneral.h"
 #include "RocketOS.h"
+#include "Airbrakes_Persistent.h"
+#include "Airbrakes_Telemetry.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 namespace Airbrakes{
 
     class Application{
+        using TelemetryFileName_t = std::array<char, Airbrakes_CFG_FileNameBufferSize>;
     private:
         //varables shared between systems
         struct{
@@ -14,25 +17,36 @@ namespace Airbrakes{
 
         //sd card systems
         SdFat m_sdCard;
-        RocketOS::Telemetry::DataLog<Airbrakes_CFG_TelemetryBufferSize, float_t, float_t, float_t> m_telemetry;
-        uint_t m_telemetryRefreshPeriod;
-        elapsedMillis m_telemetryRefresh;
+        DataLogWithCommands<Airbrakes_CFG_TelemetryBufferSize, Airbrakes_CFG_FileNameBufferSize, 
+        float_t,    //environment value
+        float_t,    //control input
+        float_t     //gain
+        > m_telemetry;
         bool m_doLogging;
-        std::array<char, Airbrakes_CFG_LogBufferSize> m_logBuffer;
-        RocketOS::Telemetry::SDFile m_log;
-        const RocketOS::Telemetry::FileCommands c_logCommands;
+        SDFileWithCommands<Airbrakes_CFG_LogBufferSize, Airbrakes_CFG_FileNameBufferSize> m_log;
 
         //non-volatile storage systems
-        RocketOS::Persistent::EEPROMBackup<float_t> m_persistent;
-        const RocketOS::Persistent::EEPROMCommands<float_t> c_persistentCommands;
+        EEPROMWithCommands<
+        float_t,                //gain value
+        TelemetryFileName_t,    //log file name
+        TelemetryFileName_t,    //telemetry file name
+        uint_t,                 //telemetry refresh period
+        bool,                   //simulation mode enable
+        uint_t                  //simulation refresh period
+        > m_persistent;
 
         //serial port systems
         RocketOS::SerialInput m_inputBuffer;
         elapsedMillis m_serialRefresh;
 
         //HIL systems
-        RocketOS::Simulation::TxHIL<float_t, float_t> m_TxHIL;
-        RocketOS::Simulation::RxHIL<float_t> m_RxHIL;
+        RocketOS::Simulation::TxHIL<
+        float_t,    //control signal
+        float_t     //echo of environment input
+        > m_TxHIL;
+        RocketOS::Simulation::RxHIL<
+        float_t     //environment input
+        > m_RxHIL;
         uint_t m_HILRefreshPeriod;
         bool m_HILEnabled;
 
@@ -86,9 +100,10 @@ namespace Airbrakes{
             };
         // ------------------------------------
         //list of subcommands
-        const std::array<CommandList, 3> c_rootChildren{
-            c_logCommands.getCommands(),
-            c_persistentCommands.getCommands(),
+        const std::array<CommandList, 4> c_rootChildren{
+            m_log.getCommands(),
+            m_telemetry.getCommands(),
+            m_persistent.getCommands(),
             CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()}
         };
         //list of local commands
@@ -100,9 +115,7 @@ namespace Airbrakes{
                 c_root.printAllCommands();
             }},
             Command{"safe", "", [this](arg_t){
-                m_persistent.save();
-                m_log.flush();
-                m_telemetry.flush();
+                makeShutdownSafe();
             }}
         };
         //command list object

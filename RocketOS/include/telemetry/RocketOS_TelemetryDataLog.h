@@ -38,6 +38,7 @@ namespace RocketOS{
             SDFile m_file;
         public:
             DataLog(SdFat& sd, DataLogSettings<T_types>... settings) : m_values(DataLogValue<T_types>(settings)...), m_file(sd, m_fileBuffer.data(), m_fileBuffer.size(), RocketOS_Telemetry_DefaultTelemetryFileName){}
+            DataLog(SdFat& sd, const char* file, DataLogSettings<T_types>... settings) : m_values(DataLogValue<T_types>(settings)...), m_file(sd, m_fileBuffer.data(), m_fileBuffer.size(), file){}
 
             error_t newFile(){
                 error_t error1 = m_file.newFile();
@@ -53,6 +54,10 @@ namespace RocketOS{
 
             error_t setFileMode(SDFileModes mode){
                 return m_file.setMode(mode);
+            }
+
+            SDFileModes getFileMode() const{
+                return m_file.getMode();
             }
 
             error_t flush(){
