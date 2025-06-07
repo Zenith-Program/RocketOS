@@ -10,18 +10,23 @@ using namespace RocketOS::Simulation;
 
 
 Application::Application() : 
+//control syatems
+m_controller("controller", 50),
+
 //telemetry systems
 m_telemetry("telemetry", m_sdCard, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
-    DataLogSettings<float_t>{m_sharedVariables.altitude, "altitude"}, 
-    DataLogSettings<float_t>{m_sharedVariables.deployment, "deployment"},
-    DataLogSettings<float_t>{m_sharedVariables.gain, "gain"}
+    DataLogSettings<float_t>{m_controller.getAltitudeRef(), "altitude"}, 
+    DataLogSettings<float_t>{m_controller.getDeploymentRef(), "deployment"},
+    DataLogSettings<float_t>{m_controller.getGainRef(), "gain"}
 ),
 m_doLogging(false),
 m_log("log", m_sdCard, Airbrakes_CFG_DefaultLogFile),
 
 //persistent systems
 m_persistent("persistent",
-    EEPROMSettings<float_t>{m_sharedVariables.gain, 0, "gain"},
+    EEPROMSettings<float_t>{m_controller.getGainRef(), 0, "gain"},
+    EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), 50, "controller clock period"},
+    EEPROMSettings<bool>{m_controller.getActiveFlagRef(), false, "controller flag"},
     EEPROMSettings<TelemetryFileName_t>{m_log.getNameBufferRef(), "log.txt", "log file name"},
     EEPROMSettings<TelemetryFileName_t>{m_telemetry.getNameBufferRef(), "telemetry.csv", "telemetry file name"},
     EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), 100, "telemetry refresh"},
@@ -34,11 +39,11 @@ m_inputBuffer(115200),
 
 //simulation systems
 m_TxHIL(
-    m_sharedVariables.deployment, 
-    m_sharedVariables.altitude
+    m_controller.getDeploymentRef(), 
+    m_controller.getAltitudeRef()
 ),
 m_RxHIL(m_inputBuffer, 
-    m_sharedVariables.altitude
+    m_controller.getAltitudeRef()
 ),
 m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
 m_HILEnabled(false),

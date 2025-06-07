@@ -52,7 +52,7 @@ namespace Airbrakes{
             Command{"", "s", [this](arg_t args){
                 char messageBuffer[RocketOS_Telemetry_CommandInternalBufferSize ];
                 args[0].copyStringData(messageBuffer, RocketOS_Telemetry_CommandInternalBufferSize);
-                logLine(messageBuffer);
+                this->logLine(messageBuffer);
             }},
             Command{"new", "", [this](arg_t){
                 this->newFile();
@@ -69,7 +69,7 @@ namespace Airbrakes{
             return {m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
         }
 
-        error_t logLine(const char* message){
+        void logLine(const char* message){
             this->log("[");
             this->log(millis());
             this->log("] ");
