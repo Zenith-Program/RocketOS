@@ -1,6 +1,6 @@
 #pragma once
 
-#define Airbrakes_CFG_TelemetryBufferSize 512
+#define Airbrakes_CFG_TelemetryBufferSize 0x20000 //128Kb
 #define Airbrakes_CFG_LogBufferSize 512
 
 #define Airbrakes_CFG_TelemetryRefreshPeriod_ms 100

@@ -16,13 +16,14 @@ namespace Airbrakes{
 
         // --- sd card systems ---
         SdFat m_sdCard;
-        DataLogWithCommands<Airbrakes_CFG_TelemetryBufferSize, Airbrakes_CFG_FileNameBufferSize, 
+        DataLogWithCommands<Airbrakes_CFG_FileNameBufferSize, 
+        uint_t,     //timestamp
         float_t,    //environment value
         float_t,    //control input
         float_t     //gain
         > m_telemetry;
-        bool m_doLogging;
         SDFileWithCommands<Airbrakes_CFG_LogBufferSize, Airbrakes_CFG_FileNameBufferSize> m_log;
+        uint_t m_timestamp;
 
         // --- non-volatile storage systems ---
         EEPROMWithCommands<
@@ -55,10 +56,10 @@ namespace Airbrakes{
         RocketOS::Shell::Interpreter m_interpreter;
 
     public:
-        Application();
+        Application(char*, uint_t);
         
         void initialize();
-        void makeShutdownSafe();
+        void makeShutdownSafe(bool=true);
 
         void updateBackground(); 
 

@@ -9,17 +9,17 @@ using namespace RocketOS::Simulation;
 
 
 
-Application::Application() : 
+Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize) : 
 //control syatems
 m_controller("controller", 50),
 
 //telemetry systems
-m_telemetry("telemetry", m_sdCard, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
+m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
+    DataLogSettings<uint_t>{m_timestamp, "timestamp"},
     DataLogSettings<float_t>{m_controller.getAltitudeRef(), "altitude"}, 
     DataLogSettings<float_t>{m_controller.getDeploymentRef(), "deployment"},
     DataLogSettings<float_t>{m_controller.getGainRef(), "gain"}
 ),
-m_doLogging(false),
 m_log("log", m_sdCard, Airbrakes_CFG_DefaultLogFile),
 
 //persistent systems
@@ -71,18 +71,19 @@ void Application::initialize(){
     }
     else Serial.println("Initialized the SD card");
     //start timers
-
+    m_controller.resetInit();
+    Serial.println("Initialized the controller");
     //final message
     if(error == error_t::GOOD) Serial.println("Sucesfully initialized all systems");
     else Serial.println("Initialization complete, some systems failed to initialize");
 }
 
-void Application::makeShutdownSafe(){
+void Application::makeShutdownSafe(bool printErrors){
     //save non-volatile memory
-    m_persistent.save();
+    if(m_persistent.save() != error_t::GOOD && printErrors) Serial.println("Error saving persistent EEPROM data");
     //save telemetry and logs
-    m_telemetry.flush();
-    m_log.flush();
+    if(m_telemetry.flush() != error_t::GOOD && printErrors) Serial.println("Error flushing telemetry file");
+    if(m_log.flush() != error_t::GOOD && printErrors) Serial.println("Error flushing log file");
 }
 
 void Application::updateBackground(){
@@ -99,7 +100,8 @@ void Application::updateBackground(){
          m_serialRefresh = 0;
     }
     //make telemetry log
-    if(m_doLogging && m_telemetry.isRefreshed()){
+    if(m_controller.isActive() && m_telemetry.isRefreshed()){
+        m_timestamp = millis();
         m_telemetry.logLine();
         m_telemetry.clearRefresh();
     }

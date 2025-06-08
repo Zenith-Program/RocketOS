@@ -14,9 +14,8 @@ namespace Airbrakes{
         using arg_t = RocketOS::Shell::arg_t;
 
         // === ROOT COMMAND LIST ===
-        // children command lists ---------
             // === NAME SUBCOMMAND ===
-            //list of commands
+            //list of local commands
             const std::array<Command, 2> c_nameCommands{
                 Command{"", "", [this](arg_t){
                     Serial.println(m_fileName.data());
@@ -28,6 +27,7 @@ namespace Airbrakes{
             // ======================
             
             // === MODE SUBCOMMAND ===
+            //list of local commands
             const std::array<Command, 3> c_modeCommands{
                 Command{"", "", [this](arg_t){
                     if(this->getMode() == RocketOS::Telemetry::SDFileModes::Buffer) Serial.println("Buffer");
@@ -41,13 +41,12 @@ namespace Airbrakes{
                 }}
             };
             //========================
-        //---------------------------------
         //list of subcommands
         const std::array<CommandList, 2> c_rootChildren{
             CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
             CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0}
         };
-        //list of commands
+        //list of local commands
         const std::array<Command, 2> c_rootCommands{
             Command{"", "s", [this](arg_t args){
                 char messageBuffer[RocketOS_Telemetry_CommandInternalBufferSize ];
@@ -85,8 +84,8 @@ namespace Airbrakes{
     };
 
 
-    template<std::size_t t_bufferSize, std::size_t t_nameSize, class... T>
-    class DataLogWithCommands : public RocketOS::Telemetry::DataLog<t_bufferSize, T...>{
+    template<std::size_t t_nameSize, class... T>
+    class DataLogWithCommands : public RocketOS::Telemetry::DataLog<T...>{
     private:
         const char* const m_name;
         std::array<char, t_nameSize> m_fileName;
@@ -98,9 +97,8 @@ namespace Airbrakes{
         using arg_t = RocketOS::Shell::arg_t;
 
         // === ROOT COMMAND LIST ===
-        // children command lists ---------
             // === NAME SUBCOMMAND ===
-            //list of commands
+            //list of local commands
             const std::array<Command, 2> c_nameCommands{
                 Command{"", "", [this](arg_t){
                     Serial.println(m_fileName.data());
@@ -112,7 +110,7 @@ namespace Airbrakes{
             // ======================
             
             // === MODE SUBCOMMAND ===
-            //list of commands
+            //list of local commands
             const std::array<Command, 3> c_modeCommands{
                 Command{"", "", [this](arg_t){
                     if(this->getFileMode() == RocketOS::Telemetry::SDFileModes::Buffer) Serial.println("Buffer");
@@ -125,6 +123,7 @@ namespace Airbrakes{
                     this->setFileMode(RocketOS::Telemetry::SDFileModes::Record);
                 }}
             };
+            // =======================
 
             // === REFRESH SUBCOMMAND ===
             //list of commands
@@ -137,8 +136,7 @@ namespace Airbrakes{
                     this->m_refreshPeriod = args[0].getUnsignedData();
                 }}
             };
-            //========================
-        //---------------------------------
+            // ==========================
         //list of subcommands
         const std::array<CommandList, 3> c_rootChildren{
             CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
@@ -154,7 +152,7 @@ namespace Airbrakes{
         // =========================
 
     public:
-        DataLogWithCommands(const char* name, SdFat& sd, const char* file, uint_t refreshPeriod, RocketOS::Telemetry::DataLogSettings<T>... settings) : RocketOS::Telemetry::DataLog<t_bufferSize, T...>(sd, m_fileName.data(), settings...), m_name(name), m_refreshPeriod(refreshPeriod), m_refresh(0){
+        DataLogWithCommands(const char* name, SdFat& sd, char* fileBuffer, uint_t fileBufferSize, const char* file, uint_t refreshPeriod, RocketOS::Telemetry::DataLogSettings<T>... settings) : RocketOS::Telemetry::DataLog<T...>(sd, fileBuffer, fileBufferSize, m_fileName.data(), settings...), m_name(name), m_refreshPeriod(refreshPeriod), m_refresh(0){
             std::strncpy(m_fileName.data(), file, m_fileName.size());
         }
 
@@ -167,7 +165,7 @@ namespace Airbrakes{
         }
 
         void clearRefresh(){
-            m_refreshPeriod = 0;
+            m_refresh = 0;
         }
 
         //refrence acessors for persistent storage

@@ -29,16 +29,15 @@ namespace RocketOS{
         };
         
 
-        template<std::size_t t_bufferSize, class... T_types>
+        template<class... T_types>
         class DataLog{
         private:
             static constexpr std::size_t c_size = sizeof...(T_types);
             std::tuple<DataLogValue<T_types>...> m_values;
-            std::array<char, t_bufferSize> m_fileBuffer;
             SDFile m_file;
         public:
-            DataLog(SdFat& sd, DataLogSettings<T_types>... settings) : m_values(DataLogValue<T_types>(settings)...), m_file(sd, m_fileBuffer.data(), m_fileBuffer.size(), RocketOS_Telemetry_DefaultTelemetryFileName){}
-            DataLog(SdFat& sd, const char* file, DataLogSettings<T_types>... settings) : m_values(DataLogValue<T_types>(settings)...), m_file(sd, m_fileBuffer.data(), m_fileBuffer.size(), file){}
+            DataLog(SdFat& sd, char* fileBuffer, uint_t fileBufferSize, DataLogSettings<T_types>... settings) : m_values(DataLogValue<T_types>(settings)...), m_file(sd, fileBuffer, fileBufferSize, RocketOS_Telemetry_DefaultTelemetryFileName){}
+            DataLog(SdFat& sd, char* fileBuffer, uint_t fileBufferSize, const char* file, DataLogSettings<T_types>... settings) : m_values(DataLogValue<T_types>(settings)...), m_file(sd, fileBuffer, fileBufferSize, file){}
 
             error_t newFile(){
                 error_t error1 = m_file.newFile();

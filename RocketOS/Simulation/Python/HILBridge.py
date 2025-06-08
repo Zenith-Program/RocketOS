@@ -6,7 +6,6 @@ import struct
 import time
 import sys
 import os
-# This script was partially vibecoded by chatGPT
 
 CONFIG_FILE_NAME = 'HILBridge.cfg'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

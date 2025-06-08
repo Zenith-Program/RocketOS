@@ -59,7 +59,8 @@ error_t SDFile::flushRecord(){
 }
 
 error_t SDFile::flushBuffer(){
-    *m_currentBufferPos = '\0';
+    if(m_currentBufferPos < m_buffer + m_bufferSize) *m_currentBufferPos = '\0';
+    else *(m_buffer + m_bufferSize - 1) = '\0';
     m_file = m_sd.open(m_fileName, SD_OpenAppend);
     if(!m_file) return error_t::ERROR;
     m_file.print(m_buffer);

@@ -31,6 +31,15 @@ namespace Airbrakes{
                 m_isActive = false;
             }
 
+            void resetInit(){
+                if(m_isActive) m_clock.begin([this](){m_deployment = -m_gain * m_altitude;}, m_clockPeriod);
+            }
+            
+            bool isActive(){
+                return m_isActive;
+            }
+
+
             //acessors to references for peristent storage, telemetry and HIL systems
             auto& getAltitudeRef(){
                 return m_altitude;
