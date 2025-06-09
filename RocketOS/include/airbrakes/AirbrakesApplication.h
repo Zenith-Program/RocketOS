@@ -20,14 +20,16 @@ namespace Airbrakes{
         uint_t,     //timestamp
         float_t,    //environment value
         float_t,    //control input
-        float_t     //gain
+        float_t,    // P gain
+        float_t     // D gain
         > m_telemetry;
         SDFileWithCommands<Airbrakes_CFG_LogBufferSize, Airbrakes_CFG_FileNameBufferSize> m_log;
         uint_t m_timestamp;
 
         // --- non-volatile storage systems ---
         EEPROMWithCommands<
-        float_t,                //controller gain value
+        float_t,                //controller P gain value
+        float_t,                //controller D gain value
         uint_t,                 //controller update period
         bool,                   //controller enable
         TelemetryFileName_t,    //log file name
@@ -44,7 +46,9 @@ namespace Airbrakes{
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
         float_t,    //control signal
-        float_t     //echo of environment input
+        float_t,    //echo of environment input
+        float_t,    //calculated velocity
+        float_t     //deltaT
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
         float_t     //environment input
@@ -69,38 +73,37 @@ namespace Airbrakes{
         using CommandList = RocketOS::Shell::CommandList;
         using arg_t = RocketOS::Shell::arg_t;
         // === ROOT COMMAND LIST ===
-        // children command lists ---------
             // === SIMULATION SUBCOMMAND ===
-            // children command lists ---------
                 // === REFRESH SUBCOMMAND ===
-                const std::array<Command, 2> c_simRefreshCommands{
-                    Command{"", "", [this](arg_t){
-                        Serial.print(m_HILRefreshPeriod);
-                        Serial.println("ms");
+                    //list of local commands
+                    const std::array<Command, 2> c_simRefreshCommands{
+                        Command{"", "", [this](arg_t){
+                            Serial.print(m_HILRefreshPeriod);
+                            Serial.println("ms");
+                        }},
+                        Command{"set", "u", [this](arg_t args){
+                            m_HILRefreshPeriod = args[0].getUnsignedData();
+                        }}
+                    };
+                // ==========================
+                //list of subcommands
+                const std::array<CommandList, 1> c_simChildren{
+                    CommandList{"refresh", c_simRefreshCommands.data(), c_simRefreshCommands.size(), nullptr, 0}
+                };
+                //list of local commands
+                const std::array<Command, 3> c_simCommands{
+                    Command{"start", "", [this](arg_t){
+                        m_HILEnabled = true;
                     }},
-                    Command{"set", "u", [this](arg_t args){
-                        m_HILRefreshPeriod = args[0].getUnsignedData();
+                    Command{"stop", "", [this](arg_t){
+                        m_HILEnabled = false;
+                    }},
+                    Command{"", "", [this](arg_t){
+                        if(m_HILEnabled) Serial.println("Simulation is active");
+                        else Serial.println("Simulation is inactive");
                     }}
                 };
-            //---------------------------------
-            //list of subcommands
-            const std::array<CommandList, 1> c_simChildren{
-                CommandList{"refresh", c_simRefreshCommands.data(), c_simRefreshCommands.size(), nullptr, 0}
-            };
-            //list of local commands
-            const std::array<Command, 3> c_simCommands{
-                Command{"start", "", [this](arg_t){
-                    m_HILEnabled = true;
-                }},
-                Command{"stop", "", [this](arg_t){
-                    m_HILEnabled = false;
-                }},
-                Command{"", "", [this](arg_t){
-                    if(m_HILEnabled) Serial.println("Simulation is active");
-                    else Serial.println("Simulation is inactive");
-                }}
-            };
-        // ------------------------------------
+            // =============================
         //list of subcommands
         const std::array<CommandList, 5> c_rootChildren{
             m_controller.getCommands(),

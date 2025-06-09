@@ -18,13 +18,15 @@ m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrak
     DataLogSettings<uint_t>{m_timestamp, "timestamp"},
     DataLogSettings<float_t>{m_controller.getAltitudeRef(), "altitude"}, 
     DataLogSettings<float_t>{m_controller.getDeploymentRef(), "deployment"},
-    DataLogSettings<float_t>{m_controller.getGainRef(), "gain"}
+    DataLogSettings<float_t>{m_controller.getPGainRef(), "P gain"},
+    DataLogSettings<float_t>{m_controller.getDGainRef(), "D gain"}
 ),
 m_log("log", m_sdCard, Airbrakes_CFG_DefaultLogFile),
 
 //persistent systems
 m_persistent("persistent",
-    EEPROMSettings<float_t>{m_controller.getGainRef(), 0, "gain"},
+    EEPROMSettings<float_t>{m_controller.getPGainRef(), 0, "Pgain"},
+    EEPROMSettings<float_t>{m_controller.getDGainRef(), 0, "Dgain"},
     EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), 50, "controller clock period"},
     EEPROMSettings<bool>{m_controller.getActiveFlagRef(), false, "controller flag"},
     EEPROMSettings<TelemetryFileName_t>{m_log.getNameBufferRef(), "log.txt", "log file name"},
@@ -40,7 +42,9 @@ m_inputBuffer(115200),
 //simulation systems
 m_TxHIL(
     m_controller.getDeploymentRef(), 
-    m_controller.getAltitudeRef()
+    m_controller.getAltitudeRef(),
+    m_controller.getVelocityRef(),
+    m_controller.getDeltaTRef()
 ),
 m_RxHIL(m_inputBuffer, 
     m_controller.getAltitudeRef()

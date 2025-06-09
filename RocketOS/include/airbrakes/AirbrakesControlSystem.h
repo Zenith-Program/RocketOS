@@ -8,13 +8,19 @@ namespace Airbrakes{
         class DemoController{
         private:
             const char* const m_name;
-            float_t m_altitude, m_deployment, m_gain;
+            float_t m_altitude, m_deployment, m_Pgain, m_Dgain;
             uint_t m_clockPeriod;
             IntervalTimer m_clock;
             bool m_isActive;
+
+            elapsedMicros m_clockDif;
+            float_t m_prevAltitude, m_prevDifferentAltitude;
+            float_t m_velocity;
+            bool m_startup;
+            float_t m_deltaT;
             
         public:
-            DemoController(const char* name, uint_t clockPeriod) : m_name(name), m_gain(0), m_clockPeriod(clockPeriod), m_isActive(false){}
+            DemoController(const char* name, uint_t clockPeriod) : m_name(name), m_Pgain(0), m_Dgain(0), m_clockPeriod(clockPeriod), m_isActive(false){}
 
             RocketOS::Shell::CommandList getCommands() const{
                 return {"controller", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
@@ -22,8 +28,12 @@ namespace Airbrakes{
 
             void start(){
                 m_clock.end();
-                m_clock.begin([this](){m_deployment = -m_gain * m_altitude;}, m_clockPeriod);
+                m_clock.begin([this](){this->clock();}, m_clockPeriod);
                 m_isActive = true;
+                m_prevAltitude = 0;
+                m_prevDifferentAltitude = 0;
+                m_clockDif = 0;
+                m_startup = true;
             }
 
             void stop(){
@@ -32,11 +42,28 @@ namespace Airbrakes{
             }
 
             void resetInit(){
-                if(m_isActive) m_clock.begin([this](){m_deployment = -m_gain * m_altitude;}, m_clockPeriod);
+                if(m_isActive) m_clock.begin([this](){this->clock();}, m_clockPeriod);
             }
             
             bool isActive(){
                 return m_isActive;
+            }
+
+            void clock(){
+                if(m_altitude != m_prevAltitude){
+                    Serial.println(m_clockDif);
+                    m_prevDifferentAltitude = m_prevAltitude;
+                    m_prevAltitude = m_altitude;
+                    m_deltaT = static_cast<float_t>(static_cast<uint_t>(m_clockDif))/1000000.0;
+                    m_clockDif = 0;
+                    if(m_prevAltitude != 0 && m_prevDifferentAltitude != 0) m_startup = false;
+                    Serial.println(m_deltaT);
+                    if(m_deltaT != 0 && !m_startup) m_velocity = (m_altitude - m_prevDifferentAltitude)/m_deltaT;
+                    m_deployment = -m_Pgain * m_altitude - m_Dgain * m_velocity;
+                    Serial.println(m_velocity);
+                    Serial.println(m_deployment);
+                }
+                
             }
 
 
@@ -49,8 +76,12 @@ namespace Airbrakes{
                 return m_deployment;
             }
 
-            auto& getGainRef(){
-                return m_gain;
+            auto& getPGainRef(){
+                return m_Pgain;
+            }
+
+            auto& getDGainRef(){
+                return m_Dgain;
             }
 
             auto& getClockPeriodRef(){
@@ -59,6 +90,14 @@ namespace Airbrakes{
 
             auto& getActiveFlagRef(){
                 return m_isActive;
+            }
+
+            const auto& getVelocityRef(){
+                return m_velocity;
+            }
+
+            const auto& getDeltaTRef(){
+                return m_deltaT;
             }
 
         private:
@@ -86,11 +125,16 @@ namespace Airbrakes{
                 // command list
                 const std::array<Command, 2> c_gainCommands{
                     Command{"", "", [this](arg_t){
-                        Serial.println(m_gain);
+                        Serial.print("P: ");
+                        Serial.println(m_Pgain);
+                        Serial.print("D: ");
+                        Serial.println(m_Dgain);
                     }},
-                    Command{"set", "f", [this](arg_t args){
-                        float_t newGain = args[0].getFloatData();
-                        if(newGain >= 0) m_gain = newGain;
+                    Command{"set", "ff", [this](arg_t args){
+                        float_t newPGain = args[0].getFloatData();
+                        float_t newDGain = args[1].getFloatData();
+                        if(newPGain >= 0) m_Pgain = newPGain;
+                        if(newDGain >= 0) m_Dgain = newDGain;
                     }}
                 };
                 //==========================

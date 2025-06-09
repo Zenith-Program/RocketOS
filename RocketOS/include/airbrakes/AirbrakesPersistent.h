@@ -12,7 +12,6 @@ namespace Airbrakes{
         using arg_t = RocketOS::Shell::arg_t;
         
         // === ROOT COMMAND LIST ===
-        // --- children command lists ---------
             //=== RESTORE SUBCOMMAND ===
             //list of local commands
             const std::array<Command, 2> c_persistentResotreCommands{
@@ -23,8 +22,7 @@ namespace Airbrakes{
                     this->restoreDefaults();
                 }},
             };
-            //======================
-        // ------------------------------------
+            //==========================
         //list of subcommands
         const std::array<CommandList, 1> c_persistentChildren{
             CommandList{"restore", c_persistentResotreCommands.data(), c_persistentResotreCommands.size(), nullptr, 0}
@@ -35,7 +33,7 @@ namespace Airbrakes{
                 this->save();
             }}
         };
-        //================================
+        //==========================
     public:
         EEPROMWithCommands(const char* name, RocketOS::Persistent::EEPROMSettings<T>... settings) : RocketOS::Persistent::EEPROMBackup<T...>(settings...), m_name(name){}
 
