@@ -160,8 +160,8 @@ function y = linInterp(x1,y1,x2,y2,x)
     end
 end
 
-function saveFlightPath(file, altitudes, targetApogee, maxVelocity, vSize, angleSize)
-    header = [targetApogee maxVelocity vSize angleSize];
+function saveFlightPath(file, altitudes, targetApogee, maxVelocity, vStep, angleStep)
+    header = [targetApogee maxVelocity vStep angleStep];
     writematrix(header, file, 'WriteMode','overwrite');
     writematrix(altitudes, file, 'WriteMode','append');
 end
@@ -179,7 +179,7 @@ MaxVelocity = 150; %m/s
 VelocitySamples = 64; %number of velocity samples
 MinAngle = 0.1; % where to stop before singularity degrees
 AngleSamples = 64; %degrees per sample
-ExportFileName = "flightPath.csv"; %file were the mesh is saved
+ExportFileName = "mesh.csv"; %file were the mesh is saved
 DoDisplay = true; %diplay figures of mesh or not
 
 %generation properties
@@ -248,9 +248,6 @@ title("Centerline Flight Path with Target's Past Cone");
 xlabel('Vertical Velocity (m/s)');
 ylabel("Angle (degrees)");
 zlabel("Altitude (m)");
-
-%save to file
-saveFlightPath(ExportFileName, centerPathAltitudes, TargetApogee, MaxVelocity, VelocitySamples, AngleSamples);
 
 
 
