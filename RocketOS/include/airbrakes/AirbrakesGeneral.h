@@ -11,6 +11,9 @@ namespace Airbrakes{
     using float_t = RocketOS::float_t;
     using uint_t = RocketOS::uint_t;
     using int_t = RocketOS::int_t;
+    using error_t = RocketOS::error_t;
+    template<class T>
+    using result_t = RocketOS::result_t<T>;
 }
 
 /*configuration validity checks
