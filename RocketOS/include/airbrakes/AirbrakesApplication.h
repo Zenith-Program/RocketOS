@@ -4,39 +4,37 @@
 #include "AirbrakesPersistent.h"
 #include "AirbrakesTelemetry.h"
 #include "AirbrakesControlSystem.h"
+#include "AirbrakesFlightPlan.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 namespace Airbrakes{
 
     class Application{
-        using TelemetryFileName_t = std::array<char, Airbrakes_CFG_FileNameBufferSize>;
     private:
         // --- control system ---
         Controls::DemoController m_controller;
+        Controls::FlightPlan m_flightPlan;
 
         // --- sd card systems ---
         SdFat m_sdCard;
-        DataLogWithCommands<Airbrakes_CFG_FileNameBufferSize, 
-        uint_t,     //timestamp
-        float_t,    //environment value
-        float_t,    //control input
-        float_t,    // P gain
-        float_t     // D gain
+        DataLogWithCommands<
+            float_t,    //altitude
+            float_t,    //velocity
+            float_t     //angle
         > m_telemetry;
-        SDFileWithCommands<Airbrakes_CFG_LogBufferSize, Airbrakes_CFG_FileNameBufferSize> m_log;
-        uint_t m_timestamp;
+        SDFileWithCommands m_log;
 
         // --- non-volatile storage systems ---
         EEPROMWithCommands<
-        float_t,                //controller P gain value
-        float_t,                //controller D gain value
-        uint_t,                 //controller update period
-        bool,                   //controller enable
-        TelemetryFileName_t,    //log file name
-        TelemetryFileName_t,    //telemetry file name
-        uint_t,                 //telemetry refresh period
-        bool,                   //simulation mode enable
-        uint_t                  //simulation refresh period
+            uint_t,         //controller update period
+            bool,           //controller enable
+            bool,           //telemetry log override
+            FileName_t,     //log file name
+            FileName_t,     //telemetry file name
+            FileName_t,     //flight plan file name
+            uint_t,         //telemetry refresh period
+            bool,           //simulation mode enable
+            uint_t          //simulation refresh period
         > m_persistent;
 
         // --- serial port systems ---
@@ -45,13 +43,13 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
-        float_t,    //control signal
-        float_t,    //echo of environment input
-        float_t,    //calculated velocity
-        float_t     //deltaT
+            float_t,    //altitude
+            float_t,    //echo of velocity
+            float_t     //echo of angle
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
-        float_t     //environment input
+            float_t,    //velocity
+            float_t     //angle
         > m_RxHIL;
         uint_t m_HILRefreshPeriod;
         bool m_HILEnabled;
@@ -60,11 +58,10 @@ namespace Airbrakes{
         RocketOS::Shell::Interpreter m_interpreter;
 
     public:
-        Application(char*, uint_t);
+        Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize);
         
         void initialize();
-        void makeShutdownSafe(bool=true);
-
+        void makeShutdownSafe(bool printErrors=true);
         void updateBackground(); 
 
     private:

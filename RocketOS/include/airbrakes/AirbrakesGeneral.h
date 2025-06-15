@@ -14,6 +14,8 @@ namespace Airbrakes{
     using error_t = RocketOS::error_t;
     template<class T>
     using result_t = RocketOS::result_t<T>;
+
+    using FileName_t = std::array<char, Airbrakes_CFG_FileNameBufferSize>;
 }
 
 /*configuration validity checks

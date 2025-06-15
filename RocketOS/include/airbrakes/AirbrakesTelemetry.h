@@ -1,14 +1,39 @@
 #include "RocketOS.h"
-#include <Arduino.h> //millis
+#include "AirbrakesGeneral.h"
+#include <Arduino.h> //millis & elapsed millis
 
 namespace Airbrakes{
-    template<std::size_t t_bufferSize, std::size_t t_nameSize>
     class SDFileWithCommands : public RocketOS::Telemetry::SDFile{
     private:
         const char* const m_name;
-        std::array<char, t_bufferSize> m_buffer;
-        std::array<char, t_nameSize> m_fileName;
+        FileName_t m_fileName;
 
+    public:
+        SDFileWithCommands(const char* name, SdFat& sd, char* buffer, uint_t bufferSize, const char* file) : RocketOS::Telemetry::SDFile(sd, buffer, bufferSize, m_fileName.data()), m_name(name) {
+            std::strncpy(m_fileName.data(), file, m_fileName.size());
+        }
+
+        RocketOS::Shell::CommandList getCommands() const{
+            return {m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
+        }
+
+        void logLine(const char* message){
+            this->log("[");
+            this->log(millis());
+            this->log("] ");
+            this->log(message);
+            this->log("\n");
+            this->flush();
+        }
+
+        //refrence acessors for persistent storage
+        auto& getNameBufferRef(){
+            return m_fileName;
+        }
+
+    private:
+
+        // ##### COMMANDS #####
         using Command = RocketOS::Shell::Command;
         using CommandList = RocketOS::Shell::CommandList;
         using arg_t = RocketOS::Shell::arg_t;
@@ -58,9 +83,21 @@ namespace Airbrakes{
             }}
         };
         // =========================
+    };
+
+
+    template<class... T>
+    class DataLogWithCommands : public RocketOS::Telemetry::DataLog<uint_t, T...>{
+    private:
+        const char* const m_name;
+        FileName_t m_fileName;
+        uint_t m_refreshPeriod;
+        elapsedMillis m_refresh;
+        uint_t m_timeStamp;
+        bool m_enableOverride;
 
     public:
-        SDFileWithCommands(const char* name, SdFat& sd, const char* file) : RocketOS::Telemetry::SDFile(sd, m_buffer.data(), m_buffer.size(), m_fileName.data()), m_name(name) {
+        DataLogWithCommands(const char* name, SdFat& sd, char* fileBuffer, uint_t fileBufferSize, const char* file, uint_t refreshPeriod, RocketOS::Telemetry::DataLogSettings<T>... settings) : RocketOS::Telemetry::DataLog<uint_t, T...>(sd, fileBuffer, fileBufferSize, m_fileName.data(), RocketOS::Telemetry::DataLogSettings<uint_t>{m_timeStamp, "time"}, settings...), m_name(name), m_refreshPeriod(refreshPeriod), m_refresh(0), m_timeStamp(millis()), m_enableOverride(false){
             std::strncpy(m_fileName.data(), file, m_fileName.size());
         }
 
@@ -68,30 +105,31 @@ namespace Airbrakes{
             return {m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
         }
 
-        void logLine(const char* message){
-            this->log("[");
-            this->log(millis());
-            this->log("] ");
-            this->log(message);
-            this->log("\n");
-            this->flush();
+        bool ready(){
+            m_timeStamp = millis();
+            return !m_enableOverride && m_refresh > m_refreshPeriod;
+        }
+
+        void clearReady(){
+            m_refresh = 0;
+        }
+
+        auto& getOverrideRef(){
+            return m_enableOverride;
         }
 
         //refrence acessors for persistent storage
         auto& getNameBufferRef(){
             return m_fileName;
         }
-    };
 
+        auto& getRefreshPeriodRef(){
+            return m_refreshPeriod;
+        }
 
-    template<std::size_t t_nameSize, class... T>
-    class DataLogWithCommands : public RocketOS::Telemetry::DataLog<T...>{
     private:
-        const char* const m_name;
-        std::array<char, t_nameSize> m_fileName;
-        uint_t m_refreshPeriod;
-        elapsedMillis m_refresh;
 
+        // ##### COMMAND LIST #####
         using Command = RocketOS::Shell::Command;
         using CommandList = RocketOS::Shell::CommandList;
         using arg_t = RocketOS::Shell::arg_t;
@@ -137,11 +175,27 @@ namespace Airbrakes{
                 }}
             };
             // ==========================
+
+            // === OVERRIDE SUBCOMMAND ===
+            const std::array<Command, 3> c_overrideCommands{
+                Command{"", "", [this](arg_t){
+                    if(m_enableOverride) Serial.println("logging is disabled");
+                    else Serial.println("logging is enabled");
+                }},
+                Command{"set", "", [this](arg_t){
+                    m_enableOverride = true;
+                }},
+                Command{"clear", "", [this](arg_t){
+                    m_enableOverride = false;
+                }}
+            };
+            // ===========================
         //list of subcommands
-        const std::array<CommandList, 3> c_rootChildren{
+        const std::array<CommandList, 4> c_rootChildren{
             CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
             CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0},
-            CommandList{"refresh", c_refreshCommands.data(), c_refreshCommands.size(), nullptr, 0}
+            CommandList{"refresh", c_refreshCommands.data(), c_refreshCommands.size(), nullptr, 0},
+            CommandList{"override", c_overrideCommands.data(), c_overrideCommands.size(), nullptr, 0}
         };
         //list of commands
         const std::array<Command, 1> c_rootCommands{
@@ -150,31 +204,5 @@ namespace Airbrakes{
             }}
         };
         // =========================
-
-    public:
-        DataLogWithCommands(const char* name, SdFat& sd, char* fileBuffer, uint_t fileBufferSize, const char* file, uint_t refreshPeriod, RocketOS::Telemetry::DataLogSettings<T>... settings) : RocketOS::Telemetry::DataLog<T...>(sd, fileBuffer, fileBufferSize, m_fileName.data(), settings...), m_name(name), m_refreshPeriod(refreshPeriod), m_refresh(0){
-            std::strncpy(m_fileName.data(), file, m_fileName.size());
-        }
-
-        RocketOS::Shell::CommandList getCommands() const{
-            return {m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
-        }
-
-        bool isRefreshed() const{
-            return m_refresh > m_refreshPeriod;
-        }
-
-        void clearRefresh(){
-            m_refresh = 0;
-        }
-
-        //refrence acessors for persistent storage
-        auto& getNameBufferRef(){
-            return m_fileName;
-        }
-
-        auto& getRefreshPeriodRef(){
-            return m_refreshPeriod;
-        }
     };
 }

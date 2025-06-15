@@ -9,51 +9,50 @@ using namespace RocketOS::Simulation;
 
 
 
-Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize) : 
-//control syatems
-m_controller("controller", 50),
+Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
+    //control syatems
+    m_controller("controller", m_flightPlan, 100),
+    m_flightPlan(m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
+    //telemetry systems
+    m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
+        DataLogSettings<float_t>{m_controller.getAltitudeRef(), "altitude"}, 
+        DataLogSettings<float_t>{m_controller.getVelocityRef(), "velocity"},
+        DataLogSettings<float_t>{m_controller.getAngleRef(), "angle"}
+    ),
+    m_log("log", m_sdCard, logBuffer, logBufferSize, Airbrakes_CFG_DefaultLogFile),
 
-//telemetry systems
-m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
-    DataLogSettings<uint_t>{m_timestamp, "timestamp"},
-    DataLogSettings<float_t>{m_controller.getAltitudeRef(), "altitude"}, 
-    DataLogSettings<float_t>{m_controller.getDeploymentRef(), "deployment"},
-    DataLogSettings<float_t>{m_controller.getPGainRef(), "P gain"},
-    DataLogSettings<float_t>{m_controller.getDGainRef(), "D gain"}
-),
-m_log("log", m_sdCard, Airbrakes_CFG_DefaultLogFile),
+    //persistent systems
+    m_persistent("persistent",
+        EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), 50, "controller clock period"},
+        EEPROMSettings<bool>{m_controller.getActiveFlagRef(), false, "controller flag"},
+        EEPROMSettings<bool>{m_telemetry.getOverrideRef(), false, "telemetry override"},
+        EEPROMSettings<FileName_t>{m_log.getNameBufferRef(), Airbrakes_CFG_DefaultLogFile, "log file name"},
+        EEPROMSettings<FileName_t>{m_telemetry.getNameBufferRef(), Airbrakes_CFG_DefaultTelemetryFile, "telemetry file name"},
+        EEPROMSettings<FileName_t>{m_flightPlan.getFileNameRef(), Airbrakes_CFG_DefaultFlightPlanFileName,"flight plan file"},
+        EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), 100, "telemetry refresh"},
+        EEPROMSettings<bool>{m_HILEnabled, false, "simulation mode"},
+        EEPROMSettings<uint_t>{m_HILRefreshPeriod, 10, "simulation refresh"}
+    ),
 
-//persistent systems
-m_persistent("persistent",
-    EEPROMSettings<float_t>{m_controller.getPGainRef(), 0, "Pgain"},
-    EEPROMSettings<float_t>{m_controller.getDGainRef(), 0, "Dgain"},
-    EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), 50, "controller clock period"},
-    EEPROMSettings<bool>{m_controller.getActiveFlagRef(), false, "controller flag"},
-    EEPROMSettings<TelemetryFileName_t>{m_log.getNameBufferRef(), "log.txt", "log file name"},
-    EEPROMSettings<TelemetryFileName_t>{m_telemetry.getNameBufferRef(), "telemetry.csv", "telemetry file name"},
-    EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), 100, "telemetry refresh"},
-    EEPROMSettings<bool>{m_HILEnabled, false, "simulation mode"},
-    EEPROMSettings<uint_t>{m_HILRefreshPeriod, 10, "simulation refresh"}
-),
+    //serial systems
+    m_inputBuffer(115200),
 
-//serial systems
-m_inputBuffer(115200),
+    //simulation systems
+    m_TxHIL(
+        m_controller.getAltitudeRef(),
+        m_controller.getVelocityRef(),
+        m_controller.getAngleRef()
+    ),
+    m_RxHIL(m_inputBuffer, 
+        m_controller.getVelocityRef(),
+        m_controller.getAngleRef()
+    ),
+    m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
+    m_HILEnabled(false),
 
-//simulation systems
-m_TxHIL(
-    m_controller.getDeploymentRef(), 
-    m_controller.getAltitudeRef(),
-    m_controller.getVelocityRef(),
-    m_controller.getDeltaTRef()
-),
-m_RxHIL(m_inputBuffer, 
-    m_controller.getAltitudeRef()
-),
-m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
-m_HILEnabled(false),
-
-//shell systems
-m_interpreter(m_inputBuffer, &c_root){}
+    //shell systems
+    m_interpreter(m_inputBuffer, &c_root)
+{}
 
 
 void Application::initialize(){
@@ -74,6 +73,16 @@ void Application::initialize(){
          error = error_t::ERROR;
     }
     else Serial.println("Initialized the SD card");
+    //load flight plan
+    error_t loadError = m_flightPlan.loadFromFile();
+    if(loadError == error_t::GOOD) Serial.printf("Sucesfully loaded flight plan from '%s'\n", m_flightPlan.getFileName());
+    else{
+        if(loadError == error_t(2)) Serial.printf("Formatting error encountered when loading flight plan from '%s'\n", m_flightPlan.getFileName());
+        else if(loadError == error_t(3)) Serial.printf("Failed to load flight plan from '%s' due to lack of allocated memory\n", m_flightPlan.getFileName());
+        else if(loadError == error_t(4)) Serial.printf("Failed to open flight plan with file name '%s'\n", m_flightPlan.getFileName());
+        else Serial.println("Failed to load the flight plan");
+        error = error_t::ERROR;
+    }
     //start timers
     m_controller.resetInit();
     Serial.println("Initialized the controller");
@@ -104,9 +113,8 @@ void Application::updateBackground(){
          m_serialRefresh = 0;
     }
     //make telemetry log
-    if(m_controller.isActive() && m_telemetry.isRefreshed()){
-        m_timestamp = millis();
+    if(m_controller.isActive() && m_telemetry.ready()){
         m_telemetry.logLine();
-        m_telemetry.clearRefresh();
+        m_telemetry.clearReady();
     }
 }

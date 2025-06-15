@@ -71,6 +71,7 @@ namespace RocketOS{
         uint_t m_code;
 
     public:
+        error_t() = default;
         error_t(uint_t);
         operator bool() const;
         operator uint_t() const;
