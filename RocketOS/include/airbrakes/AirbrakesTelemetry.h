@@ -40,48 +40,48 @@ namespace Airbrakes{
 
         // === ROOT COMMAND LIST ===
             // === NAME SUBCOMMAND ===
-            //list of local commands
-            const std::array<Command, 2> c_nameCommands{
-                Command{"", "", [this](arg_t){
-                    Serial.println(m_fileName.data());
-                }},
-                Command{"set", "s", [this](arg_t args){
-                    args[0].copyStringData(m_fileName.data(), m_fileName.size());
-                }}
-            };
+                //list of local commands
+                const std::array<Command, 2> c_nameCommands{
+                    Command{"", "", [this](arg_t){
+                        Serial.println(m_fileName.data());
+                    }},
+                    Command{"set", "s", [this](arg_t args){
+                        args[0].copyStringData(m_fileName.data(), m_fileName.size());
+                    }}
+                };
             // ======================
             
             // === MODE SUBCOMMAND ===
+                //list of local commands
+                const std::array<Command, 3> c_modeCommands{
+                    Command{"", "", [this](arg_t){
+                        if(this->getMode() == RocketOS::Telemetry::SDFileModes::Buffer) Serial.println("Buffer");
+                        else Serial.println("Record");
+                    }},
+                    Command{"buffer", "", [this](arg_t){
+                        this->setMode(RocketOS::Telemetry::SDFileModes::Buffer);
+                    }},
+                    Command{"record", "", [this](arg_t){
+                        this->setMode(RocketOS::Telemetry::SDFileModes::Record);
+                    }}
+                };
+            //========================
+            //list of subcommands
+            const std::array<CommandList, 2> c_rootChildren{
+                CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
+                CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0}
+            };
             //list of local commands
-            const std::array<Command, 3> c_modeCommands{
-                Command{"", "", [this](arg_t){
-                    if(this->getMode() == RocketOS::Telemetry::SDFileModes::Buffer) Serial.println("Buffer");
-                    else Serial.println("Record");
+            const std::array<Command, 2> c_rootCommands{
+                Command{"", "s", [this](arg_t args){
+                    char messageBuffer[RocketOS_Telemetry_CommandInternalBufferSize ];
+                    args[0].copyStringData(messageBuffer, RocketOS_Telemetry_CommandInternalBufferSize);
+                    this->logLine(messageBuffer);
                 }},
-                Command{"buffer", "", [this](arg_t){
-                    this->setMode(RocketOS::Telemetry::SDFileModes::Buffer);
-                }},
-                Command{"record", "", [this](arg_t){
-                    this->setMode(RocketOS::Telemetry::SDFileModes::Record);
+                Command{"new", "", [this](arg_t){
+                    this->newFile();
                 }}
             };
-            //========================
-        //list of subcommands
-        const std::array<CommandList, 2> c_rootChildren{
-            CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
-            CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0}
-        };
-        //list of local commands
-        const std::array<Command, 2> c_rootCommands{
-            Command{"", "s", [this](arg_t args){
-                char messageBuffer[RocketOS_Telemetry_CommandInternalBufferSize ];
-                args[0].copyStringData(messageBuffer, RocketOS_Telemetry_CommandInternalBufferSize);
-                this->logLine(messageBuffer);
-            }},
-            Command{"new", "", [this](arg_t){
-                this->newFile();
-            }}
-        };
         // =========================
     };
 
@@ -136,31 +136,31 @@ namespace Airbrakes{
 
         // === ROOT COMMAND LIST ===
             // === NAME SUBCOMMAND ===
-            //list of local commands
-            const std::array<Command, 2> c_nameCommands{
-                Command{"", "", [this](arg_t){
-                    Serial.println(m_fileName.data());
-                }},
-                Command{"set", "s", [this](arg_t args){
-                    args[0].copyStringData(m_fileName.data(), m_fileName.size());
-                }}
-            };
+                //list of local commands
+                const std::array<Command, 2> c_nameCommands{
+                    Command{"", "", [this](arg_t){
+                        Serial.println(m_fileName.data());
+                    }},
+                    Command{"set", "s", [this](arg_t args){
+                        args[0].copyStringData(m_fileName.data(), m_fileName.size());
+                    }}
+                };
             // ======================
             
             // === MODE SUBCOMMAND ===
-            //list of local commands
-            const std::array<Command, 3> c_modeCommands{
-                Command{"", "", [this](arg_t){
-                    if(this->getFileMode() == RocketOS::Telemetry::SDFileModes::Buffer) Serial.println("Buffer");
-                    else Serial.println("Record");
-                }},
-                Command{"buffer", "", [this](arg_t){
-                    this->setFileMode(RocketOS::Telemetry::SDFileModes::Buffer);
-                }},
-                Command{"record", "", [this](arg_t){
-                    this->setFileMode(RocketOS::Telemetry::SDFileModes::Record);
-                }}
-            };
+                //list of local commands
+                const std::array<Command, 3> c_modeCommands{
+                    Command{"", "", [this](arg_t){
+                        if(this->getFileMode() == RocketOS::Telemetry::SDFileModes::Buffer) Serial.println("Buffer");
+                        else Serial.println("Record");
+                    }},
+                    Command{"buffer", "", [this](arg_t){
+                        this->setFileMode(RocketOS::Telemetry::SDFileModes::Buffer);
+                    }},
+                    Command{"record", "", [this](arg_t){
+                        this->setFileMode(RocketOS::Telemetry::SDFileModes::Record);
+                    }}
+                };
             // =======================
 
             // === REFRESH SUBCOMMAND ===
@@ -190,19 +190,19 @@ namespace Airbrakes{
                 }}
             };
             // ===========================
-        //list of subcommands
-        const std::array<CommandList, 4> c_rootChildren{
-            CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
-            CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0},
-            CommandList{"refresh", c_refreshCommands.data(), c_refreshCommands.size(), nullptr, 0},
-            CommandList{"override", c_overrideCommands.data(), c_overrideCommands.size(), nullptr, 0}
-        };
-        //list of commands
-        const std::array<Command, 1> c_rootCommands{
-            Command{"new", "", [this](arg_t){
-                this->newFile();
-            }}
-        };
+            //list of subcommands
+            const std::array<CommandList, 4> c_rootChildren{
+                CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
+                CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0},
+                CommandList{"refresh", c_refreshCommands.data(), c_refreshCommands.size(), nullptr, 0},
+                CommandList{"override", c_overrideCommands.data(), c_overrideCommands.size(), nullptr, 0}
+            };
+            //list of commands
+            const std::array<Command, 1> c_rootCommands{
+                Command{"new", "", [this](arg_t){
+                    this->newFile();
+                }}
+            };
         // =========================
     };
 }

@@ -102,8 +102,9 @@ namespace Airbrakes{
                 };
             // =============================
         //list of subcommands
-        const std::array<CommandList, 5> c_rootChildren{
+        const std::array<CommandList, 6> c_rootChildren{
             m_controller.getCommands(),
+            m_flightPlan.getCommands(),
             m_log.getCommands(),
             m_telemetry.getCommands(),
             m_persistent.getCommands(),

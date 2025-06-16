@@ -3,8 +3,12 @@
 using namespace Airbrakes;
 using namespace Airbrakes::Controls;
 
-FlightPlan::FlightPlan(SdFat& sd, float_t* memory, uint_t size, const char* file) : m_sd(sd), m_memory(memory), m_memorySize(size), m_isLoaded(false){
+FlightPlan::FlightPlan(const char* name, SdFat& sd, float_t* memory, uint_t size, const char* file) : m_name(name), m_sd(sd), m_memory(memory), m_memorySize(size), m_isLoaded(false){
     std::strncpy(m_fileName.data(), file, m_fileName.size()-1);
+}
+
+RocketOS::Shell::CommandList FlightPlan::getCommands(){
+    return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), nullptr, 0};
 }
 
 const char* FlightPlan::getFileName() const{
@@ -56,11 +60,12 @@ bool FlightPlan::isLoaded() const{
 }
 
 result_t<float_t> FlightPlan::getAltitude(float_t velocity, float_t angle) const{
+    if(!isLoaded()) return error_t(3);
     const error_t OUT_OF_BOUNDS = error_t(2);
     result_t<float_t> truncated = getValueInMesh(velocityIndex(velocity), angleIndex(angle));
     result_t<float_t> velocityLeg = getValueInMesh(velocityIndex(velocity) + 1, angleIndex(angle));
     result_t<float_t> angleLeg = getValueInMesh(velocityIndex(velocity), angleIndex(angle) + 1);
-    if(truncated.error != error_t::GOOD || (velocityLeg.error != error_t::GOOD && velocityLeg.error != OUT_OF_BOUNDS) || (angleLeg.error != error_t::GOOD && angleLeg.error != OUT_OF_BOUNDS)) return error_t::ERROR;
+    if(truncated.error != error_t::GOOD || (velocityLeg.error != error_t::GOOD && velocityLeg.error != OUT_OF_BOUNDS) || (angleLeg.error != error_t::GOOD && angleLeg.error != OUT_OF_BOUNDS)) return error_t(2);
     if(velocityLeg.error == OUT_OF_BOUNDS){ //velocity leg was out of bounds
         if(angleLeg.error == OUT_OF_BOUNDS){ //angle leg was out of bounds
             //corner of the mesh case
@@ -102,7 +107,7 @@ uint_t FlightPlan::velocityIndex(float_t velocity) const{
 }
 
 uint_t FlightPlan::angleIndex(float_t angle) const{
-    return  min(max(0, static_cast<uint_t>(angle / angleIncrement())), m_numAngleSamples);
+    return  min(max(0, static_cast<uint_t>(angle / angleIncrement())), m_numAngleSamples-1);
 }
 
 float_t FlightPlan::velocityIncrement() const{
