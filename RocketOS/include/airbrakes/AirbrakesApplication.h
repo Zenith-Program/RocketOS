@@ -111,7 +111,7 @@ namespace Airbrakes{
                 CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()}
             };
             //list of local commands
-            const std::array<Command, 3> c_rootCommands{
+            const std::array<Command, 4> c_rootCommands{
                 Command{"echo", "", [](arg_t){
                     Serial.println("echo");
                 }},
@@ -120,6 +120,9 @@ namespace Airbrakes{
                 }},
                 Command{"safe", "", [this](arg_t){
                     makeShutdownSafe();
+                }},
+                Command{"restartSD", "", [this](arg_t){
+                    if(!m_sdCard.begin(SdioConfig(FIFO_SDIO))) Serial.println("Error re-initializing the SD card");
                 }}
             };
             //command list object
