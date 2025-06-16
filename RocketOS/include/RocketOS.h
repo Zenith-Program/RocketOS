@@ -15,3 +15,6 @@
 #ifdef RocketOS_CFG_HasSimulation
 #include "simulation\RocketOS_Simulation.h"
 #endif
+#ifdef RocketOS_CFG_HasProcessing
+#include "processing\RocketOS_Processing.h"
+#endif

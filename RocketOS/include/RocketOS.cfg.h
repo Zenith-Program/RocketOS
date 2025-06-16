@@ -14,6 +14,7 @@
 #define RocketOS_CFG_HasPersistent
 #define RocketOS_CFG_HasTelemetry
 #define RocketOS_CFG_HasSimulation
+#define RocketOS_CFG_HasProcessing
 
 /*Architecure Type
  * 

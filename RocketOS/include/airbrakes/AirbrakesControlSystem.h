@@ -14,9 +14,14 @@ namespace Airbrakes{
             uint_t m_clockPeriod;
             IntervalTimer m_clock;
             bool m_isActive;
+
+            RocketOS::Processing::FIRFilter<5> m_filter;
+            RocketOS::Processing::AccumulationFilter<10, RocketOS::Processing::AccumulationFilterTypes::UNORDERED> m_linearCovariance;
             
         public:
-            DemoController(const char* name, const FlightPlan& plan, uint_t clockPeriod) : m_name(name), m_flightPlan(plan), m_clockPeriod(clockPeriod), m_isActive(false){}
+            DemoController(const char* name, const FlightPlan& plan, uint_t clockPeriod) : m_name(name), m_flightPlan(plan), m_clockPeriod(clockPeriod), m_isActive(false), m_filter({3,-2,-8,2,5}), m_linearCovariance([](float_t a){
+                return a*a;
+            }){}
 
             RocketOS::Shell::CommandList getCommands() const{
                 return {"controller", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};

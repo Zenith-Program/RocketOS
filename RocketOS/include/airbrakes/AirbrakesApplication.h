@@ -101,29 +101,30 @@ namespace Airbrakes{
                     }}
                 };
             // =============================
-        //list of subcommands
-        const std::array<CommandList, 6> c_rootChildren{
-            m_controller.getCommands(),
-            m_flightPlan.getCommands(),
-            m_log.getCommands(),
-            m_telemetry.getCommands(),
-            m_persistent.getCommands(),
-            CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()}
-        };
-        //list of local commands
-        const std::array<Command, 3> c_rootCommands{
-            Command{"echo", "", [](arg_t){
-                Serial.println("echo");
-            }},
-            Command{"commands", "", [this](arg_t){
-                c_root.printAllCommands();
-            }},
-            Command{"safe", "", [this](arg_t){
-                makeShutdownSafe();
-            }}
-        };
-        //command list object
-        const CommandList c_root = {"root", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
+            //list of subcommands
+            const std::array<CommandList, 6> c_rootChildren{
+                m_controller.getCommands(),
+                m_flightPlan.getCommands(),
+                m_log.getCommands(),
+                m_telemetry.getCommands(),
+                m_persistent.getCommands(),
+                CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()}
+            };
+            //list of local commands
+            const std::array<Command, 3> c_rootCommands{
+                Command{"echo", "", [](arg_t){
+                    Serial.println("echo");
+                }},
+                Command{"commands", "", [this](arg_t){
+                    c_root.printAllCommands();
+                }},
+                Command{"safe", "", [this](arg_t){
+                    makeShutdownSafe();
+                }}
+            };
+            //command list object
+            const CommandList c_root = {"root", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
+        // =========================
 
     };
 } 
