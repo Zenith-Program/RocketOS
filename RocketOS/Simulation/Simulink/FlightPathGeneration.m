@@ -160,8 +160,8 @@ function y = linInterp(x1,y1,x2,y2,x)
     end
 end
 
-function saveFlightPath(file, altitudes, targetApogee, maxVelocity, vSize, angleSize)
-    header = [targetApogee maxVelocity vSize angleSize];
+function saveFlightPath(file, altitudes, targetApogee, minDragArea, maxDragArea, mass, temp, pressure, maxVelocity, vSize, angleSize)
+    header = [targetApogee minDragArea maxDragArea mass temp pressure maxVelocity vSize angleSize];
     writematrix(header, file, 'WriteMode','overwrite');
     writematrix(altitudes, file, 'WriteMode','append');
 end
@@ -250,7 +250,7 @@ ylabel("Angle (degrees)");
 zlabel("Altitude (m)");
 
 %save to file
-saveFlightPath(ExportFileName, centerPathAltitudes, TargetApogee, MaxVelocity, VelocitySamples, AngleSamples);
+saveFlightPath(ExportFileName, centerPathAltitudes, TargetApogee, MinimumDragArea, MaximumDragArea, DryMass, LaunchSiteTemperature, LaunchSitePressure, MaxVelocity, VelocitySamples, AngleSamples);
 
 
 

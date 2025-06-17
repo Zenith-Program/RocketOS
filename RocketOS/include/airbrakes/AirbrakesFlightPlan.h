@@ -15,7 +15,15 @@ namespace Airbrakes{
             uint_t m_numVelocitySamples;
             static constexpr float_t c_maxAngle = PI/2;
             uint_t m_numAngleSamples;
+
+            //launch parameters
             float_t m_targetApogee;
+            float_t m_minimumDragArea;
+            float_t m_maximumDragArea;
+            float_t m_dryMass;
+            float_t m_groundLevelTemperature;
+            float_t m_groundLevelPressure;
+
             FileName_t m_fileName;
             bool m_isLoaded;
         public:
@@ -31,6 +39,11 @@ namespace Airbrakes{
 
             result_t<float_t> getAltitude(float_t, float_t) const;
             result_t<float_t> getTargetApogee() const;
+            result_t<float_t> getMinDragArea() const;
+            result_t<float_t> getMaxDragArea() const;
+            result_t<float_t> getDryMass() const;
+            result_t<float_t> getGroundTemperature() const;
+            result_t<float_t> getGroundPressure() const;
         private:
             error_t setValueInMesh(float_t, uint_t, uint_t);
             result_t<float_t> getValueInMesh(uint_t, uint_t) const;
@@ -53,13 +66,16 @@ namespace Airbrakes{
 
             // === ROOT COMMAND LIST ===
                 //list of local commands
-                const std::array<Command, 4> c_rootCommands = {
+                const std::array<Command, 3> c_rootCommands = {
                     Command{"properties", "", [this](arg_t){
                         if(isLoaded()){
                              Serial.printf("Flight plan '%s':\n", m_fileName.data());
                              Serial.printf("Target apogee: %.2f m\n", m_targetApogee);
-                             Serial.printf("Vertical velocity: 0 m/s - %.2f m/s with %d samples\n", m_maxVelocity, m_numVelocitySamples);
-                             Serial.printf("Angle to horizontal: 0 degrees - %.2f degrees with %d samples\n", c_maxAngle * 180 / PI, m_numAngleSamples);
+                             Serial.printf("Effective drag area range: %.4f m^2 - %.4f m^2\n", m_minimumDragArea, m_maximumDragArea);
+                             Serial.printf("Dry mass: %.2f kg\n", m_dryMass);
+                             Serial.printf("Launch site conditions: %.2f celcius at %.2f pa\n", m_groundLevelTemperature - 273.15, m_groundLevelPressure);
+                             Serial.printf("Vertical velocity range: 0 m/s - %.2f m/s with %d samples\n", m_maxVelocity, m_numVelocitySamples);
+                             Serial.printf("Angle with horizontal range: 0 degrees - %.2f degrees with %d samples\n", c_maxAngle * 180 / PI, m_numAngleSamples);
                              Serial.printf("Using %d kB of available %d kB storage\n", m_numAngleSamples * m_numVelocitySamples * 4 / 1024, m_memorySize * 4 / 1024);
                         }
                         else {
@@ -75,10 +91,6 @@ namespace Airbrakes{
                         else if(error == error_t(3)) Serial.printf("Failed to load flight plan from '%s' due to lack of allocated memory\n", getFileName());
                         else if(error == error_t(4)) Serial.printf("Failed to open flight plan with file name '%s'\n", getFileName());
                         else Serial.println("Failed to load the flight plan");
-                    }},
-                    Command{"target", "", [this](arg_t){
-                        if(!isLoaded()) Serial.println("No flight plan is loaded");
-                        else Serial.printf("%.2f m (%.2f ft)\n", m_targetApogee, m_targetApogee * 3.28);
                     }},
                     Command{"probe", "ff", [this](arg_t args){
                         float_t velocity = args[0].getFloatData();

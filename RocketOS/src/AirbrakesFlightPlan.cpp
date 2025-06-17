@@ -27,6 +27,26 @@ error_t FlightPlan::loadFromFile(){
     result_t<float_t> readValue = readNextFloat();
     if(readValue.error != error_t::GOOD) return errorOut(2);
     m_targetApogee = readValue.data;
+    //read minimum drag area
+    readValue = readNextFloat();
+    if(readValue.error != error_t::GOOD) return errorOut(2);
+    m_minimumDragArea = readValue.data;
+    //read maximim drag area
+    readValue = readNextFloat();
+    if(readValue.error != error_t::GOOD) return errorOut(2);
+    m_maximumDragArea = readValue.data;
+    //read dry mass
+    readValue = readNextFloat();
+    if(readValue.error != error_t::GOOD) return errorOut(2);
+    m_dryMass = readValue.data;
+    //read temperature
+    readValue = readNextFloat();
+    if(readValue.error != error_t::GOOD) return errorOut(2);
+    m_groundLevelTemperature = readValue.data;
+    //read pressure
+    readValue = readNextFloat();
+    if(readValue.error != error_t::GOOD) return errorOut(2);
+    m_groundLevelTemperature = readValue.data;
     //read max veocity
     readValue = readNextFloat();
     if(readValue.error != error_t::GOOD) return errorOut(2);
@@ -85,6 +105,31 @@ result_t<float_t> FlightPlan::getAltitude(float_t velocity, float_t angle) const
 result_t<float_t> FlightPlan::getTargetApogee() const{
     if(!isLoaded()) return error_t::ERROR;
     return m_targetApogee;
+}
+
+result_t<float_t> FlightPlan::getMinDragArea() const{
+    if(!isLoaded()) return error_t::ERROR;
+    return m_minimumDragArea;
+}
+
+result_t<float_t> FlightPlan::getMaxDragArea() const{
+    if(!isLoaded()) return error_t::ERROR;
+    return m_maximumDragArea;
+}
+
+result_t<float_t> FlightPlan::getDryMass() const{
+    if(!isLoaded()) return error_t::ERROR;
+    return m_dryMass;
+}
+
+result_t<float_t> FlightPlan::getGroundTemperature() const{
+    if(!isLoaded()) return error_t::ERROR;
+    return m_groundLevelTemperature;
+}
+
+result_t<float_t> FlightPlan::getGroundPressure() const{
+    if(!isLoaded()) return error_t::ERROR;
+    return m_groundLevelPressure;
 }
 
 error_t FlightPlan::setValueInMesh(float_t val, uint_t velocityIndex, uint_t angleIndex){

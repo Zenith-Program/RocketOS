@@ -3,7 +3,7 @@
 #include "RocketOS.h"
 #include "AirbrakesPersistent.h"
 #include "AirbrakesTelemetry.h"
-#include "AirbrakesControlSystem.h"
+#include "AirbrakesController.h"
 #include "AirbrakesFlightPlan.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
