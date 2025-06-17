@@ -46,7 +46,7 @@ error_t FlightPlan::loadFromFile(){
     //read pressure
     readValue = readNextFloat();
     if(readValue.error != error_t::GOOD) return errorOut(2);
-    m_groundLevelTemperature = readValue.data;
+    m_groundLevelPressure = readValue.data;
     //read max veocity
     readValue = readNextFloat();
     if(readValue.error != error_t::GOOD) return errorOut(2);

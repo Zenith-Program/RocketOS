@@ -5,22 +5,27 @@
 #include "AirbrakesTelemetry.h"
 #include "AirbrakesController.h"
 #include "AirbrakesFlightPlan.h"
+#include "AirbrakesObserver.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 namespace Airbrakes{
 
     class Application{
     private:
+        // --- sensor readings ---
+
         // --- control system ---
         Controls::DemoController m_controller;
         Controls::FlightPlan m_flightPlan;
+        Observer m_observer;
 
         // --- sd card systems ---
         SdFat m_sdCard;
         DataLogWithCommands<
-            float_t,    //altitude
-            float_t,    //velocity
-            float_t     //angle
+            float_t,    //observed altitude
+            float_t,    //observed velocity x
+            float_t,    //observed velocity y
+            float_t     //observed angle
         > m_telemetry;
         SDFileWithCommands m_log;
 
@@ -45,10 +50,13 @@ namespace Airbrakes{
         RocketOS::Simulation::TxHIL<
             float_t,    //altitude
             float_t,    //echo of velocity
-            float_t     //echo of angle
+            float_t,    //echo of angle
+            float_t
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
-            float_t,    //velocity
+            float_t,    //altitude
+            float_t,    //x velocity
+            float_t,    //y velocity
             float_t     //angle
         > m_RxHIL;
         uint_t m_HILRefreshPeriod;

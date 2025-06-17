@@ -2,6 +2,7 @@
 #include "RocketOS.h"
 #include "AirbrakesGeneral.h"
 #include "AirbrakesFlightPlan.h"
+#include "AirbrakesObserver.h"
 #include <IntervalTimer.h>
 
 namespace Airbrakes{
@@ -10,12 +11,7 @@ namespace Airbrakes{
         private:
             const char* const m_name;
             const FlightPlan& m_flightPlan;
-
-            //inputs
-            const float_t& m_currentAltitude;
-            const float_t& m_currentVerticalVelocity;
-            const float_t& m_currentHorizontalVelocity;
-            const float_t& m_currentAngle;
+            const Observer& m_observer;
 
             //outputs
             float_t m_requestedDragArea;
@@ -25,7 +21,7 @@ namespace Airbrakes{
             bool m_isActive;
             
         public:
-            DemoController(const char* name, uint_t clockPeriod, const FlightPlan& plan, const float_t& altitude, const float_t& xVelocity, const float_t& yVelocity, const float_t& angle);
+            DemoController(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer);
 
             RocketOS::Shell::CommandList getCommands() const;
 
@@ -38,8 +34,8 @@ namespace Airbrakes{
 
 
             //acessors to references for peristent storage, telemetry and HIL systems
-            auto& getClockPeriodRef();
-            auto& getActiveFlagRef();
+            uint_t& getClockPeriodRef();
+            bool& getActiveFlagRef();
 
         private:
             // ######### command structure #########

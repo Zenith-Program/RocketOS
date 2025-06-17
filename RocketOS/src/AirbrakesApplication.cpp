@@ -11,13 +11,14 @@ using namespace RocketOS::Simulation;
 
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //control syatems
-    m_controller("controller", m_flightPlan, 100000),
+    m_controller("controller", 100000, m_flightPlan, m_observer),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
     //telemetry systems
     m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
-        DataLogSettings<float_t>{m_controller.getAltitudeRef(), "altitude"}, 
-        DataLogSettings<float_t>{m_controller.getVelocityRef(), "velocity"},
-        DataLogSettings<float_t>{m_controller.getAngleRef(), "angle"}
+        DataLogSettings<float_t>{m_observer.getAltitudeRef(), "predicted altitude"}, 
+        DataLogSettings<float_t>{m_observer.getHorizontalVelocityRef(), "predicted x velocity"},
+        DataLogSettings<float_t>{m_observer.getVerticalVelocityRef(), "predicted y velocity"},
+        DataLogSettings<float_t>{m_observer.getAngleRef(), "predicted angle"}
     ),
     m_log("log", m_sdCard, logBuffer, logBufferSize, Airbrakes_CFG_DefaultLogFile),
 
@@ -39,13 +40,16 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
 
     //simulation systems
     m_TxHIL(
-        m_controller.getAltitudeRef(),
-        m_controller.getVelocityRef(),
-        m_controller.getAngleRef()
+        m_observer.getAltitudeRef(),
+        m_observer.getHorizontalVelocityRef(),
+        m_observer.getVerticalVelocityRef(),
+        m_observer.getAngleRef()
     ),
     m_RxHIL(m_inputBuffer, 
-        m_controller.getVelocityRef(),
-        m_controller.getAngleRef()
+        m_observer.getAltitudeRef(),
+        m_observer.getHorizontalVelocityRef(),
+        m_observer.getVerticalVelocityRef(),
+        m_observer.getAngleRef()
     ),
     m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
     m_HILEnabled(false),

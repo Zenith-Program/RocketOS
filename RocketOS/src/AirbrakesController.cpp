@@ -3,8 +3,8 @@
 using namespace Airbrakes;
 using namespace Airbrakes::Controls;
 
-DemoController::DemoController(const char* name, uint_t clockPeriod, const FlightPlan& plan, const float_t& altitude, const float_t& xVelocity, const float_t& yVelocity, const float_t& angle) : 
-    m_name(name), m_flightPlan(plan), m_currentAltitude(altitude), m_currentVerticalVelocity(yVelocity), m_currentHorizontalVelocity(xVelocity), m_currentAngle(angle), m_clockPeriod(clockPeriod), m_isActive(false){}
+DemoController::DemoController(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer) : 
+    m_name(name), m_flightPlan(plan), m_observer(observer), m_clockPeriod(clockPeriod), m_isActive(false){}
 
 RocketOS::Shell::CommandList DemoController::getCommands() const{
     return {"controller", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
@@ -33,13 +33,10 @@ void DemoController::clock(){
     
 }
 
-
-//acessors to references for peristent storage, telemetry and HIL systems
-
-auto& DemoController::getClockPeriodRef(){
+uint_t& DemoController::getClockPeriodRef(){
     return m_clockPeriod;
 }
 
-auto& DemoController::getActiveFlagRef(){
+bool& DemoController::getActiveFlagRef(){
     return m_isActive;
 }
