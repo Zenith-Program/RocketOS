@@ -15,7 +15,7 @@ namespace Airbrakes{
         // --- sensor readings ---
 
         // --- control system ---
-        Controls::DemoController m_controller;
+        Controls::Controller m_controller;
         Controls::FlightPlan m_flightPlan;
         Observer m_observer;
 
@@ -25,7 +25,9 @@ namespace Airbrakes{
             float_t,    //observed altitude
             float_t,    //observed velocity x
             float_t,    //observed velocity y
-            float_t     //observed angle
+            float_t,    //observed angle
+            float_t,    //observed angular velocity
+            float_t     //requested drag area
         > m_telemetry;
         SDFileWithCommands m_log;
 
@@ -48,16 +50,19 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
+            float_t,    //requested drag area
             float_t,    //altitude
-            float_t,    //echo of velocity
+            float_t,    //echo of velocity x
+            float_t,    //echo of velocity y
             float_t,    //echo of angle
-            float_t
+            float_t     //echo of angular velocity
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
             float_t,    //altitude
             float_t,    //x velocity
             float_t,    //y velocity
-            float_t     //angle
+            float_t,    //angle
+            float_t     //angular velocity
         > m_RxHIL;
         uint_t m_HILRefreshPeriod;
         bool m_HILEnabled;

@@ -15,8 +15,20 @@ float_t& Observer::getHorizontalVelocityRef(){
     return m_predictedXVelocity;
 }
 
+float_t& Observer::getVerticalAccelerationRef(){
+    return m_predictedYAccel;
+}
+
+float_t& Observer::getHorizontalAccelerationRef(){
+    return m_predictedXAccel;
+}
+
 float_t& Observer::getAngleRef(){
     return m_predictedAngle;
+}
+
+float_t& Observer::getAngularVelocityRef(){
+    return m_predictedAngularVelocity;
 }
 
 const float_t& Observer::getAltitudeRef() const{
@@ -31,8 +43,20 @@ const float_t& Observer::getHorizontalVelocityRef() const{
     return m_predictedXVelocity;
 }
 
+const float_t& Observer::getVerticalAccelerationRef() const{
+    return m_predictedYAccel;
+}
+
+const float_t& Observer::getHorizontalAccelerationRef() const{
+    return m_predictedXAccel;
+}
+
 const float_t& Observer::getAngleRef() const{
     return m_predictedAngle;
+}
+
+const float_t& Observer::getAngularVelocityRef() const{
+    return m_predictedAngularVelocity;
 }
 
 //read only acessors
@@ -48,6 +72,18 @@ float_t Observer::getHorizontalVelocity() const{
     return m_predictedXVelocity;
 }
 
+float_t Observer::getVerticalAcceleration() const{
+    return m_predictedYAccel;
+}
+
+float_t Observer::getHorizontalAcceleration() const{
+    return m_predictedXAccel;
+}
+
 float_t Observer::getAngleToHorizontal() const{
     return m_predictedAngle;
+}
+
+float_t Observer::getAngularVelocityToHorizontal() const{
+    return m_predictedAngularVelocity;
 }
