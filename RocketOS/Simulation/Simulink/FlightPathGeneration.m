@@ -252,6 +252,10 @@ zlabel("Altitude (m)");
 %save to file
 saveFlightPath(ExportFileName, centerPathAltitudes, TargetApogee, MinimumDragArea, MaximumDragArea, DryMass, LaunchSiteTemperature, LaunchSitePressure, MaxVelocity, VelocitySamples, AngleSamples);
 
+%For simulink modeling
+SimMesh = centerPathAltitudes(end:-1:1, end:-1:1)';
+SimVelocitySamples = linspace(0, MaxVelocity, VelocitySamples);
+SimAngleSamples = linspace(0, pi/2, AngleSamples);
 
 
 
