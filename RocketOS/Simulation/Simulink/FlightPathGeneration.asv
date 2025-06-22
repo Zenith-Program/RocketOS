@@ -247,7 +247,6 @@ s.EdgeColor = 'b';
 s.FaceColor = 'b';
 s.FaceAlpha = 0.75;
 s.EdgeAlpha = 0.75;
-scatter3(0,0,TargetApogee, 'filled' ,'k');
 text(0,0,TargetApogee, "Target Apogee");
 hold off
 title("Target's Past Cone");
@@ -272,7 +271,7 @@ s.EdgeAlpha = 0.25;
 s = surface(lowerPathVelocities, lowerPathAngles * 180/pi, centerPathAltitudes);
 s.EdgeColor = 'k';
 s.FaceColor = 'g';
-scatter3(0,0,TargetApogee, 'filled' ,'k');
+scatter3(0,0,TargetApogee, 'r')
 text(0,0,TargetApogee, "Target Apogee");
 hold off
 title("Centerline Flight Path with Target's Past Cone");
@@ -298,9 +297,8 @@ hold on
 s = surface(lowerPathVelocities, lowerPathAngles * 180/pi, centerPathAltitudes);
 s.EdgeColor = 'k';
 s.FaceColor = 'g';
-scatter3(0,0,TargetApogee, 'filled' ,'k');
 text(0,0,TargetApogee, "Target Apogee");
-quiver3(lowerPathVelocities(1:VectorFieldSkips:end, 1:VectorFieldSkips:end), lowerPathAngles(1:VectorFieldSkips:end, 1:VectorFieldSkips:end) * 180/pi, zeros(size(centerPathAltitudes(1:VectorFieldSkips:end, 1:VectorFieldSkips:end))), SimGradVMesh(1:VectorFieldSkips:end, 1:VectorFieldSkips:end), SimGradAngleMesh(1:VectorFieldSkips:end, 1:VectorFieldSkips:end) * pi/180, zeros(size(centerPathAltitudes(1:VectorFieldSkips:end, 1:VectorFieldSkips:end))), 'k');
+quiver3(lowerPathVelocities(1:VectorFieldSkips:end, 1:VectorFieldSkips:end), lowerPathAngles(1:VectorFieldSkips:end, 1:VectorFieldSkips:end) * 180/pi, zeros(size(centerPathAltitudes(1:VectorFieldSkips:end, 1:VectorFieldSkips:end))), SimGradVMesh(1:VectorFieldSkips:end, 1:VectorFieldSkips:end), SimGradAngleMesh(1:VectorFieldSkips:end, 1:VectorFieldSkips:end) * pi/180, zeros(size(centerPathAltitudes(1:VectorFieldSkips:end, 1:VectorFieldSkips:end))));
 hold off
 title("Centerline Flight Path with Gradient Field");
 xlabel('Vertical Velocity (m/s)');
