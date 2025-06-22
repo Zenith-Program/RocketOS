@@ -307,6 +307,9 @@ xlabel('Vertical Velocity (m/s)');
 ylabel("Angle (degrees)");
 zlabel("Altitude (m)");
 
+SimGradVMesh = SimGradVMesh(end:-1:1, end:-1:1);
+SimGradAngleMesh = SimGradAngleMesh(end:-1:1, end:-1:1);
+
 
 
 
