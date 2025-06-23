@@ -168,6 +168,7 @@ end
 
 function [v, angle] = gradientMesh(altitudes, vMax, numV, numAngle)   
 vIncrement = vMax / numV;
+disp(vIncrement)
 angleIncrement = pi/2 / numAngle;
 v = zeros(size(altitudes));
 angle = zeros(size(altitudes));
@@ -203,14 +204,14 @@ DryMass = 3; %kg
 
 %Mesh Properties
 MaxVelocity = 150; %m/s
-VelocitySamples = 64; %number of velocity samples
+VelocitySamples = 128; %number of velocity samples
 MinAngle = 0.1; % where to stop before singularity degrees
-AngleSamples = 64; %degrees per sample
+AngleSamples = 128; %degrees per sample
 ExportFileName = "flightPath.csv"; %file were the mesh is saved
 DoDisplay = true; %diplay figures of mesh or not
 
 %generation properties
-HorizontalVelocityIncrement = 1;
+HorizontalVelocityIncrement = 0.5;
 
 %Generate Mesh
 [lowerPathVelocities,lowerPathAngles, lowerPathAltitudes] = generateRawMeshData(MinAngle * pi/180, HorizontalVelocityIncrement, MaxVelocity, TargetApogee, LaunchSiteTemperature, LaunchSitePressure, DryMass, MinimumDragArea);
@@ -307,8 +308,8 @@ xlabel('Vertical Velocity (m/s)');
 ylabel("Angle (degrees)");
 zlabel("Altitude (m)");
 
-SimGradVMesh = SimGradVMesh(end:-1:1, end:-1:1);
-SimGradAngleMesh = SimGradAngleMesh(end:-1:1, end:-1:1);
+SimGradVMesh = SimGradVMesh(end:-1:1, end:-1:1)';
+SimGradAngleMesh = SimGradAngleMesh(end:-1:1, end:-1:1)';
 
 
 
