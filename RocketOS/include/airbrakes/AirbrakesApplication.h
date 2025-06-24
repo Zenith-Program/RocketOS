@@ -50,19 +50,11 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
-            float_t,    //requested drag area
-            float_t,    //altitude
-            float_t,    //echo of velocity x
-            float_t,    //echo of velocity y
-            float_t,    //echo of angle
-            float_t     //echo of angular velocity
+            float_t,    //output value
+            float_t    //altitude
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
-            float_t,    //altitude
-            float_t,    //x velocity
-            float_t,    //y velocity
-            float_t,    //angle
-            float_t     //angular velocity
+            float_t    //altitude
         > m_RxHIL;
         uint_t m_HILRefreshPeriod;
         bool m_HILEnabled;

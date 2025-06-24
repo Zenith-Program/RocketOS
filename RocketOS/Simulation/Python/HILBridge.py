@@ -77,7 +77,7 @@ except Exception as e:
 
 
 # === UDP SOCKETS ===
-if not stop_event.isSet():
+if not stop_event.is_set():
     udp_recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_recv_sock.bind(('0.0.0.0', BRIDGE_PORT))
     udp_recv_sock.settimeout(0.1)

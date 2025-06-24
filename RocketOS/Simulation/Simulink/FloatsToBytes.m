@@ -11,7 +11,7 @@ classdef FloatsToBytes < matlab.System
         end
 
         function out = getOutputSizeImpl(obj)
-            out = [1 8*obj.NumValues]; 
+            out = [8*obj.NumValues 1]; 
         end
 
         function out = getOutputDataTypeImpl(obj)

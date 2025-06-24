@@ -20,7 +20,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         DataLogSettings<float_t>{m_observer.getVerticalVelocityRef(), "predicted y velocity"},
         DataLogSettings<float_t>{m_observer.getAngleRef(), "predicted angle"},
         DataLogSettings<float_t>{m_observer.getAngularVelocityRef(), "predicted angular velocity"},
-        DataLogSettings<float_t>{m_controller.getRequestedDragAreaRef(), "requested drag area"}
+        DataLogSettings<float_t>{m_controller.getDValTestRef(), "requested drag area"}
     ),
     m_log("log", m_sdCard, logBuffer, logBufferSize, Airbrakes_CFG_DefaultLogFile),
 
@@ -42,19 +42,11 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
 
     //simulation systems
     m_TxHIL(
-        m_controller.getRequestedDragAreaRef(),
-        m_observer.getAltitudeRef(),
-        m_observer.getHorizontalVelocityRef(),
-        m_observer.getVerticalVelocityRef(),
-        m_observer.getAngleRef(),
-        m_observer.getAngularVelocityRef()
+        m_controller.getDValTestRef(),
+        m_observer.getAltitudeRef()
     ),
     m_RxHIL(m_inputBuffer, 
-        m_observer.getAltitudeRef(),
-        m_observer.getHorizontalVelocityRef(),
-        m_observer.getVerticalVelocityRef(),
-        m_observer.getAngleRef(),
-        m_observer.getAngularVelocityRef()
+        m_observer.getAltitudeRef()
     ),
     m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
     m_HILEnabled(false),

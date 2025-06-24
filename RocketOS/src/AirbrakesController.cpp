@@ -37,10 +37,8 @@ bool Controller::isActive(){
 }
 
 void Controller::clock(){
-    float_t errorSignal = m_observer.getAltitude() - m_flightPlan.getAltitude(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
-    float_t derivativeErrorSignal = m_observer.getVeritcalVelocity() - directionalFlightPathDerivative(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal(), m_observer.getVerticalAcceleration(), m_observer.getAngularVelocityToHorizontal());
-    m_desiredVerticalAcceleration = m_proportionalGain * errorSignal + m_derivativeGain * derivativeErrorSignal;
-    m_requestedDragArea = getDragAreaFromAcceleration(m_desiredVerticalAcceleration);
+    m_differentiator.push(m_observer.getAltitude());
+    m_verticalVelocity = m_differentiator.output() / m_clockPeriod * 1000000;
 }
 
 //helpers
@@ -69,17 +67,6 @@ bool& Controller::getActiveFlagRef(){
     return m_isActive;
 }
 
-float_t& Controller::getPGainRef(){
-    return m_proportionalGain;
-}
-float_t& Controller::getDGainRef(){
-    return m_derivativeGain;
-}
-
-const float_t& Controller::getRequestedDragAreaRef() const{
-    return m_requestedDragArea;
-}
-
-const float_t& Controller::getDesiredAccelRef() const{
-    return m_desiredVerticalAcceleration;
+const float_t& Controller::getDValTestRef(){
+    return m_verticalVelocity;
 }
