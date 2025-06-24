@@ -3,6 +3,15 @@
 using namespace Airbrakes;
 using namespace Airbrakes::Controls;
 
+//error codes=======
+static const error_t NOT_LOADED = error_t(3);
+static const error_t OUT_OF_BOUNDS = error_t(2);
+static const error_t FAIL_TO_OPEN = error_t(4);
+static const error_t BAD_READ = error_t(2);
+static const error_t INSUFFICIENT_MEMMORY = error_t(3);
+static const error_t LOGIC_ERROR = error_t(3);
+//===================
+
 FlightPlan::FlightPlan(const char* name, SdFat& sd, float_t* memory, uint_t size, const char* file) : m_name(name), m_sd(sd), m_memory(memory), m_memorySize(size), m_isLoaded(false){
     std::strncpy(m_fileName.data(), file, m_fileName.size()-1);
 }
@@ -20,53 +29,53 @@ FileName_t& FlightPlan::getFileNameRef(){
 }
 
 error_t FlightPlan::loadFromFile(){
-    auto errorOut = [this](uint_t code){m_file.close(); m_isLoaded = false; return error_t(code);};
+    auto errorOut = [this](error_t error){m_file.close(); m_isLoaded = false; return error;};
     m_file = m_sd.open(m_fileName.data(), FILE_READ);
     if(!m_file) return errorOut(4); //file failed to open
     //read target apogee
     result_t<float_t> readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_targetApogee = readValue.data;
     //read minimum drag area
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_minimumDragArea = readValue.data;
     //read maximim drag area
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_maximumDragArea = readValue.data;
     //read dry mass
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_dryMass = readValue.data;
     //read temperature
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_groundLevelTemperature = readValue.data;
     //read pressure
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_groundLevelPressure = readValue.data;
     //read max veocity
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_maxVelocity = readValue.data;
     //read num velocity samples
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_numVelocitySamples = readValue.data;
     //read num angle samples
     readValue = readNextFloat();
-    if(readValue.error != error_t::GOOD) return errorOut(2);
+    if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
     m_numAngleSamples = readValue.data;
     //read mesh
     for(uint_t i=0; i<m_numAngleSamples; i++){
         for(uint_t j=0; j<m_numVelocitySamples; j++){
             readValue = readNextFloat();
-            if(readValue.error != error_t::GOOD) return errorOut(2);
+            if(readValue.error != error_t::GOOD) return errorOut(BAD_READ);
             error_t memErr = setValueInMesh(readValue.data, m_numVelocitySamples - 1 - j, m_numAngleSamples - 1 - i);
-            if(memErr == error_t(3)) return errorOut(3);
-            if(memErr != error_t::GOOD) return errorOut(2);
+            if(memErr == error_t(3)) return errorOut(INSUFFICIENT_MEMMORY);
+            if(memErr != error_t::GOOD) return errorOut(BAD_READ);
         }
     }
     m_isLoaded = true;
@@ -80,26 +89,27 @@ bool FlightPlan::isLoaded() const{
 }
 
 result_t<float_t> FlightPlan::getAltitude(float_t velocity, float_t angle) const{
-    if(!isLoaded()) return error_t(3);
-    const error_t OUT_OF_BOUNDS = error_t(2);
+    if(!isLoaded()) return NOT_LOADED;
     result_t<float_t> truncated = getValueInMesh(velocityIndex(velocity), angleIndex(angle));
     result_t<float_t> velocityLeg = getValueInMesh(velocityIndex(velocity) + 1, angleIndex(angle));
     result_t<float_t> angleLeg = getValueInMesh(velocityIndex(velocity), angleIndex(angle) + 1);
-    if(truncated.error != error_t::GOOD || (velocityLeg.error != error_t::GOOD && velocityLeg.error != OUT_OF_BOUNDS) || (angleLeg.error != error_t::GOOD && angleLeg.error != OUT_OF_BOUNDS)) return error_t(2);
-    if(velocityLeg.error == OUT_OF_BOUNDS){ //velocity leg was out of bounds
-        if(angleLeg.error == OUT_OF_BOUNDS){ //angle leg was out of bounds
-            //corner of the mesh case
-            return truncated.data;
-        }
-        //edge of mesh velocity side case
-        return (angleLeg.data - truncated.data)/angleIncrement() * (angle - angleIndex(angle) * angleIncrement()) + truncated.data;
-    }
-    if(angleLeg.error == OUT_OF_BOUNDS){ //angle leg was out of bounds
-        //edge of mesh angle side case
-        return (velocityLeg.data - truncated.data)/velocityIncrement() * (velocity - velocityIndex(velocity) * velocityIncrement()) + truncated.data;
-    }
-    // center of the mesh case
-    return (angleLeg.data - truncated.data)/angleIncrement() * (angle - angleIndex(angle) * angleIncrement()) + (velocityLeg.data - truncated.data)/velocityIncrement() * (velocity - velocityIndex(velocity) * velocityIncrement()) + truncated.data;
+    return pointSlopeInterpolate(truncated, velocityLeg, angleLeg, velocity, angle);
+}
+
+result_t<float_t> FlightPlan::getVelocityPartial(float_t velocity, float_t angle) const{
+    if(!isLoaded()) return NOT_LOADED;
+    result_t<float_t> truncated = getVelocityPartialInMesh(velocityIndex(velocity), angleIndex(angle));
+    result_t<float_t> velocityLeg = getVelocityPartialInMesh(velocityIndex(velocity) + 1, angleIndex(angle));
+    result_t<float_t> angleLeg = getVelocityPartialInMesh(velocityIndex(velocity), angleIndex(angle) + 1);
+    return pointSlopeInterpolate(truncated, velocityLeg, angleLeg, velocity, angle);
+}
+
+result_t<float_t> FlightPlan::getAnglePartial(float_t velocity, float_t angle) const{
+    if(!isLoaded()) return NOT_LOADED;
+    result_t<float_t> truncated = getAnglePartialInMesh(velocityIndex(velocity), angleIndex(angle));
+    result_t<float_t> velocityLeg = getAnglePartialInMesh(velocityIndex(velocity) + 1, angleIndex(angle));
+    result_t<float_t> angleLeg = getAnglePartialInMesh(velocityIndex(velocity), angleIndex(angle) + 1);
+    return pointSlopeInterpolate(truncated, velocityLeg, angleLeg, velocity, angle);
 }
 
 result_t<float_t> FlightPlan::getTargetApogee() const{
@@ -133,17 +143,17 @@ result_t<float_t> FlightPlan::getGroundPressure() const{
 }
 
 error_t FlightPlan::setValueInMesh(float_t val, uint_t velocityIndex, uint_t angleIndex){
-    if(velocityIndex >= m_numVelocitySamples || angleIndex >= m_numAngleSamples) return error_t(2);
+    if(velocityIndex >= m_numVelocitySamples || angleIndex >= m_numAngleSamples) return OUT_OF_BOUNDS;
     uint_t index = m_numVelocitySamples * velocityIndex + angleIndex;
-    if(index >= m_memorySize) return error_t(3);
+    if(index >= m_memorySize) return LOGIC_ERROR;
     m_memory[index] = val;
     return error_t::GOOD;
 }
 
 result_t<float_t> FlightPlan::getValueInMesh(uint_t velocityIndex, uint_t  angleIndex) const{
-    if(velocityIndex >= m_numVelocitySamples || angleIndex >= m_numAngleSamples) return error_t(2);
+    if(velocityIndex >= m_numVelocitySamples || angleIndex >= m_numAngleSamples) return OUT_OF_BOUNDS;
     uint_t index = m_numVelocitySamples * velocityIndex + angleIndex;
-    if(index >= m_memorySize) return error_t(3);
+    if(index >= m_memorySize) return LOGIC_ERROR;
     return m_memory[index];
 }
 
@@ -163,6 +173,48 @@ float_t FlightPlan::angleIncrement() const{
     return c_maxAngle / m_numAngleSamples;
 }
 
+result_t<float_t> FlightPlan::getVelocityPartialInMesh(uint_t velocityIndex, uint_t angleIndex) const{
+    if(velocityIndex >= m_numVelocitySamples || angleIndex >= m_numAngleSamples) return OUT_OF_BOUNDS;
+    if(velocityIndex == 0){
+        return (getValueInMesh(velocityIndex + 1, angleIndex) - getValueInMesh(velocityIndex, angleIndex))/velocityIncrement();
+    }
+    if(velocityIndex == m_numVelocitySamples - 1){
+        return (getValueInMesh(velocityIndex, angleIndex) - getValueInMesh(velocityIndex - 1, angleIndex))/velocityIncrement();
+    }
+    return (getValueInMesh(velocityIndex + 1, angleIndex) - getValueInMesh(velocityIndex - 1, angleIndex))/(2 * velocityIncrement());
+}
+
+result_t<float_t> FlightPlan::getAnglePartialInMesh(uint_t velocityIndex, uint_t angleIndex) const{
+    if(velocityIndex >= m_numVelocitySamples || angleIndex >= m_numAngleSamples) return OUT_OF_BOUNDS;
+    if(angleIndex == 0){
+        return (getValueInMesh(velocityIndex, angleIndex+1) - getValueInMesh(velocityIndex, angleIndex))/angleIncrement();
+    }
+    if(angleIndex == m_numAngleSamples - 1){
+        return (getValueInMesh(velocityIndex, angleIndex) - getValueInMesh(velocityIndex, angleIndex-1))/angleIncrement();
+    }
+    return (getValueInMesh(velocityIndex, angleIndex+1) - getValueInMesh(velocityIndex, angleIndex-1))/(2 * angleIncrement());
+}
+
+result_t<float_t> FlightPlan::pointSlopeInterpolate(result_t<float_t> root, result_t<float_t> vLeg, result_t<float_t> angleLeg, float_t velocity, float_t angle) const{
+    if(root.error != error_t::GOOD || (vLeg.error != error_t::GOOD && vLeg.error != OUT_OF_BOUNDS) || (angleLeg.error != error_t::GOOD && angleLeg.error != OUT_OF_BOUNDS)) return error_t(2);
+    if(vLeg.error == OUT_OF_BOUNDS){ //velocity leg was out of bounds
+        if(angleLeg.error == OUT_OF_BOUNDS){ //angle leg was out of bounds
+            //corner of the mesh case
+            return root.data;
+        }
+        //edge of mesh velocity side case
+        return (angleLeg.data - root.data)/angleIncrement() * (angle - angleIndex(angle) * angleIncrement()) + root.data;
+    }
+    if(angleLeg.error == OUT_OF_BOUNDS){ //angle leg was out of bounds
+        //edge of mesh angle side case
+        return (vLeg.data - root.data)/velocityIncrement() * (velocity - velocityIndex(velocity) * velocityIncrement()) + root.data;
+    }
+    // center of the mesh case
+    return (angleLeg.data - root.data)/angleIncrement() * (angle - angleIndex(angle) * angleIncrement()) + (vLeg.data - root.data)/velocityIncrement() * (velocity - velocityIndex(velocity) * velocityIncrement()) + root.data;
+}
+
+
+//sd card read functions-------------------------------------------------------
 result_t<float_t> FlightPlan::readNextFloat(){
     //skip non numeric / non -sign chars
     if(skipToStartOfNextFloat() != error_t::GOOD) return error_t::ERROR; //error skiping non-numeric chars

@@ -13,10 +13,13 @@ namespace Airbrakes{
             const FlightPlan& m_flightPlan;
             const Observer& m_observer;
 
-            //testing
-            RocketOS::Processing::Differentiator<25> m_differentiator;
-            float_t m_verticalVelocity;
+            //controls
+            float_t m_error, m_flightPath, m_flightPathVelocityPartial, m_flightPathAnglePartial, m_requestedDragArea, m_updateRuleDragArea, m_isSaturated;
 
+            //parameters
+            float_t m_decayRate, m_updateRuleShutdownVelocity;
+            
+            //timing
             uint_t m_clockPeriod;
             IntervalTimer m_clock;
             bool m_isActive;
@@ -37,13 +40,12 @@ namespace Airbrakes{
             //acessors to references for peristent storage, telemetry and HIL systems
             uint_t& getClockPeriodRef();
             bool& getActiveFlagRef();
-
-            const float_t& getDValTestRef();
+            const float_t& getVPartialRef() const;
+            const float_t& getAnglePartialRef() const;
 
         private:
-            float_t directionalFlightPathDerivative(float_t currentVerticalVelocity, float_t currentAngleToHorizontal, float_t verticalAcceleration, float_t angularVelocity) const;
             float_t airDensity(float_t altitude) const;
-            float_t getDragAreaFromAcceleration(float_t desiredVeritcalAcceleration) const;
+            float_t updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude) const;
         private:
             // ######### command structure #########
             using Command = RocketOS::Shell::Command;
@@ -77,9 +79,6 @@ namespace Airbrakes{
                 }},
                 Command{"stop", "", [this](arg_t){
                     stop();
-                }},
-                Command{"coefTest", "", [this](arg_t){
-                    m_differentiator.printCoefTest();
                 }}
             };
             // =========================

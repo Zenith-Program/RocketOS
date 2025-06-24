@@ -38,6 +38,8 @@ namespace Airbrakes{
             bool isLoaded() const;
 
             result_t<float_t> getAltitude(float_t, float_t) const;
+            result_t<float_t> getVelocityPartial(float_t, float_t) const;
+            result_t<float_t> getAnglePartial(float_t, float_t) const;
             result_t<float_t> getTargetApogee() const;
             result_t<float_t> getMinDragArea() const;
             result_t<float_t> getMaxDragArea() const;
@@ -45,8 +47,11 @@ namespace Airbrakes{
             result_t<float_t> getGroundTemperature() const;
             result_t<float_t> getGroundPressure() const;
         private:
+            result_t<float_t> pointSlopeInterpolate(result_t<float_t>, result_t<float_t>, result_t<float_t>, float_t, float_t) const;
             error_t setValueInMesh(float_t, uint_t, uint_t);
             result_t<float_t> getValueInMesh(uint_t, uint_t) const;
+            result_t<float_t> getVelocityPartialInMesh(uint_t, uint_t) const;
+            result_t<float_t> getAnglePartialInMesh(uint_t, uint_t) const;
             uint_t velocityIndex(float_t) const;
             uint_t angleIndex(float_t) const;
             float_t velocityIncrement() const;

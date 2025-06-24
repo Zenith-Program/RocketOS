@@ -37,25 +37,25 @@ bool Controller::isActive(){
 }
 
 void Controller::clock(){
-    m_differentiator.push(m_observer.getAltitude());
-    m_verticalVelocity = m_differentiator.output() / m_clockPeriod * 1000000;
+    m_flightPathVelocityPartial = m_flightPlan.getVelocityPartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
+    m_flightPathAnglePartial = m_flightPlan.getVelocityPartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
 }
 
 //helpers
 
-float_t Controller::directionalFlightPathDerivative(float_t currentVerticalVelocity, float_t currentAngleToHorizontal, float_t verticalAcceleration, float_t angularVelocity) const{
-    float_t magnitude = std::sqrt(verticalAcceleration * verticalAcceleration + angularVelocity * angularVelocity);
-    float_t accelUnit = verticalAcceleration / magnitude;
-    float_t angularVelocityUnit = angularVelocity / magnitude;
-    return m_flightPlan.getAltitude(currentVerticalVelocity + accelUnit, currentAngleToHorizontal + angularVelocityUnit) - m_flightPlan.getAltitude(currentVerticalVelocity, currentAngleToHorizontal);
-}
-
 float_t Controller::airDensity(float_t altitude) const{
-    return m_flightPlan.getGroundPressure() * MOLAR_MASS_OF_DRY_AIR / (IDEAL_GAS_CONSTANT * m_flightPlan.getGroundTemperature()) * std::pow(1-TEMPERATURE_LAPSE_RATE * altitude / m_flightPlan.getGroundTemperature(), GRAVITATIONAL_CONSTANT *MOLAR_MASS_OF_DRY_AIR / (IDEAL_GAS_CONSTANT * TEMPERATURE_LAPSE_RATE)-1);
+    return m_flightPlan.getGroundPressure() * MOLAR_MASS_OF_DRY_AIR / (IDEAL_GAS_CONSTANT * m_flightPlan.getGroundTemperature()) * std::pow(1-TEMPERATURE_LAPSE_RATE * altitude / m_flightPlan.getGroundTemperature(), GRAVITATIONAL_CONSTANT * MOLAR_MASS_OF_DRY_AIR / (IDEAL_GAS_CONSTANT * TEMPERATURE_LAPSE_RATE)-1);
 }
 
-float_t Controller::getDragAreaFromAcceleration(float_t desiredVeritcalAcceleration) const{
-    return 2 * desiredVeritcalAcceleration / (airDensity(m_observer.getAltitude()) * std::sqrt(m_observer.getHorizontalVelocity() * m_observer.getHorizontalVelocity() + m_observer.getVeritcalVelocity() * m_observer.getVeritcalVelocity()) * m_observer.getVeritcalVelocity());
+float_t Controller::updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude) const{
+    /*Formula
+                    2 * mass * sin(angle) * (decayRate * error - verticalVelocity - g * (pathPartialVelocity + pathPartialAngle * sin(2 * angle) / (2 * verticalVelocity)))
+    dragArea   =    -------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                airDensity * verticalVelocity^2 * pathPartialVelocity
+    
+    Derrived from 2d rocket dynamics
+    */
+    return 2 * m_flightPlan.getDryMass() * std::sin(angle) * (m_decayRate * error - verticalVelocity - GRAVITATIONAL_CONSTANT * (m_flightPlan.getVelocityPartial(verticalVelocity, angle) + m_flightPlan.getAnglePartial(verticalVelocity, angle) * std::sin(2 * angle) / (2 * verticalVelocity))) / (airDensity(altitude) * verticalVelocity * verticalVelocity * m_flightPlan.getVelocityPartial(verticalVelocity, angle));
 }
 
 //references
@@ -67,6 +67,10 @@ bool& Controller::getActiveFlagRef(){
     return m_isActive;
 }
 
-const float_t& Controller::getDValTestRef(){
-    return m_verticalVelocity;
+const float_t& Controller::getVPartialRef() const{
+    return m_flightPathVelocityPartial;
+}
+
+const float_t& Controller::getAnglePartialRef() const{
+    return m_flightPathAnglePartial;
 }

@@ -26,8 +26,7 @@ namespace Airbrakes{
             float_t,    //observed velocity x
             float_t,    //observed velocity y
             float_t,    //observed angle
-            float_t,    //observed angular velocity
-            float_t     //requested drag area
+            float_t    //observed angular velocity
         > m_telemetry;
         SDFileWithCommands m_log;
 
@@ -50,11 +49,14 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
-            float_t,    //output value
-            float_t    //altitude
+            float_t,    //partial v value
+            float_t,    //partial angle value
+            float_t,    //echo of velocity
+            float_t     //echo of angle
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
-            float_t    //altitude
+            float_t,    //velocity
+            float_t     //angle
         > m_RxHIL;
         uint_t m_HILRefreshPeriod;
         bool m_HILEnabled;
