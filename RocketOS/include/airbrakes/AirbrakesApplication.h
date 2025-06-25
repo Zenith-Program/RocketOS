@@ -26,7 +26,17 @@ namespace Airbrakes{
             float_t,    //observed velocity x
             float_t,    //observed velocity y
             float_t,    //observed angle
-            float_t    //observed angular velocity
+            float_t,    //observed angular velocity
+            float_t,    //controller error
+            float_t,    //controller flight path
+            float_t,    //controller flight path velocity partial
+            float_t,    //controller flight path angle partial
+            float_t,    //controller update rule drag
+            float_t,    //controller adjusted drag
+            float_t,    //controller requested drag
+            bool,       //controller update rule clamp flag
+            bool,       //controller saturation flag
+            bool        //controller fault flag
         > m_telemetry;
         SDFileWithCommands m_log;
 
@@ -34,7 +44,8 @@ namespace Airbrakes{
         EEPROMWithCommands<
             uint_t,         //controller update period
             bool,           //controller enable
-            bool,           //telemetry log override
+            bool,           //telemetry override
+            bool,           //log override
             FileName_t,     //log file name
             FileName_t,     //telemetry file name
             FileName_t,     //flight plan file name
@@ -49,12 +60,17 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
-            float_t,    //partial v value
-            float_t,    //partial angle value
+            float_t,    //drag area
+            float_t,    //flight path
+            float_t,    //error
+            float_t,    //update rule drag
+            float_t,    //adjusted drag
+            float_t,    //echo of altitude
             float_t,    //echo of velocity
             float_t     //echo of angle
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
+            float_t,    //altitude
             float_t,    //velocity
             float_t     //angle
         > m_RxHIL;

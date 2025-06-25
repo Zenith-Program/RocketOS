@@ -14,3 +14,7 @@
 
 #define Airbrakes_CFG_FlightPlanMemorySize 0x4000 // 2^14 entries or 64Kb
 #define Airbrakes_CFG_DefaultFlightPlanFileName "flightPath.csv"
+
+#define Airbrakes_CFG_ControllerPeriod_us 100000
+
+#define Airbrakes_CFG_HILRefresh_ms 10

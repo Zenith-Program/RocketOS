@@ -111,3 +111,11 @@ result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, const f
     if(targetSize>size) return {buffer + size, error_t::ERROR};
     return {buffer + targetSize, error_t::GOOD};
 }
+
+result_t<char*> PrintFunctions::printToBuffer(char* buffer, uint_t size, const bool& value){
+    uint_t targetSize;
+    if(value) targetSize = snprintf(buffer, size, "true");
+    else targetSize = snprintf(buffer, size, "false");
+    if(targetSize>size) return {buffer + size, error_t::ERROR};
+    return {buffer + targetSize, error_t::GOOD};
+}

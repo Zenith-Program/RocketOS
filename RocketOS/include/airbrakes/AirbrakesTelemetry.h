@@ -7,10 +7,11 @@ namespace Airbrakes{
     private:
         const char* const m_name;
         FileName_t m_fileName;
+        bool m_enableOverride;
 
     public:
-        SDFileWithCommands(const char* name, SdFat& sd, char* buffer, uint_t bufferSize, const char* file) : RocketOS::Telemetry::SDFile(sd, buffer, bufferSize, m_fileName.data()), m_name(name) {
-            std::strncpy(m_fileName.data(), file, m_fileName.size());
+        SDFileWithCommands(const char* name, SdFat& sd, char* buffer, uint_t bufferSize, const char* file) : RocketOS::Telemetry::SDFile(sd, buffer, bufferSize, m_fileName.data()), m_name(name), m_enableOverride(false) {
+            strncpy(m_fileName.data(), file, m_fileName.size());
         }
 
         RocketOS::Shell::CommandList getCommands() const{
@@ -18,17 +19,23 @@ namespace Airbrakes{
         }
 
         void logLine(const char* message){
-            this->log("[");
-            this->log(millis());
-            this->log("] ");
-            this->log(message);
-            this->log("\n");
-            this->flush();
+            if(!m_enableOverride){
+                this->log("[");
+                this->log(millis());
+                this->log("] ");
+                this->log(message);
+                this->log("\n");
+                this->flush();
+            }
         }
 
         //refrence acessors for persistent storage
         auto& getNameBufferRef(){
             return m_fileName;
+        }
+
+        auto& getOverrideFlagRef(){
+            return m_enableOverride;
         }
 
     private:
@@ -66,10 +73,26 @@ namespace Airbrakes{
                     }}
                 };
             //========================
+
+            // === OVERRIDE SUBCOMMAND ===
+                const std::array<Command, 3> c_overrideCommands{
+                    Command{"", "", [this](arg_t){
+                        if(m_enableOverride) Serial.println("log is disabled");
+                        else Serial.println("log is enabled");
+                    }},
+                    Command{"set", "", [this](arg_t){
+                        m_enableOverride = true;
+                    }},
+                    Command{"clear", "", [this](arg_t){
+                        m_enableOverride = false;
+                    }}
+                };
+            // ===========================
             //list of subcommands
-            const std::array<CommandList, 2> c_rootChildren{
+            const std::array<CommandList, 3> c_rootChildren{
                 CommandList{"name", c_nameCommands.data(), c_nameCommands.size(), nullptr, 0},
-                CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0}
+                CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0},
+                CommandList{"override", c_overrideCommands.data(), c_overrideCommands.size(), nullptr, 0}
             };
             //list of local commands
             const std::array<Command, 2> c_rootCommands{
@@ -98,7 +121,7 @@ namespace Airbrakes{
 
     public:
         DataLogWithCommands(const char* name, SdFat& sd, char* fileBuffer, uint_t fileBufferSize, const char* file, uint_t refreshPeriod, RocketOS::Telemetry::DataLogSettings<T>... settings) : RocketOS::Telemetry::DataLog<uint_t, T...>(sd, fileBuffer, fileBufferSize, m_fileName.data(), RocketOS::Telemetry::DataLogSettings<uint_t>{m_timeStamp, "time"}, settings...), m_name(name), m_refreshPeriod(refreshPeriod), m_refresh(0), m_timeStamp(millis()), m_enableOverride(false){
-            std::strncpy(m_fileName.data(), file, m_fileName.size());
+            strncpy(m_fileName.data(), file, m_fileName.size());
         }
 
         RocketOS::Shell::CommandList getCommands() const{
@@ -164,31 +187,31 @@ namespace Airbrakes{
             // =======================
 
             // === REFRESH SUBCOMMAND ===
-            //list of commands
-            const std::array<Command, 2> c_refreshCommands{
-                Command{"", "", [this](arg_t){
-                    Serial.print(m_refreshPeriod);
-                    Serial.println(" ms");
-                }},
-                Command{"set", "u", [this](arg_t args){
-                    this->m_refreshPeriod = args[0].getUnsignedData();
-                }}
-            };
+                //list of commands
+                const std::array<Command, 2> c_refreshCommands{
+                    Command{"", "", [this](arg_t){
+                        Serial.print(m_refreshPeriod);
+                        Serial.println(" ms");
+                    }},
+                    Command{"set", "u", [this](arg_t args){
+                        this->m_refreshPeriod = args[0].getUnsignedData();
+                    }}
+                };
             // ==========================
 
             // === OVERRIDE SUBCOMMAND ===
-            const std::array<Command, 3> c_overrideCommands{
-                Command{"", "", [this](arg_t){
-                    if(m_enableOverride) Serial.println("logging is disabled");
-                    else Serial.println("logging is enabled");
-                }},
-                Command{"set", "", [this](arg_t){
-                    m_enableOverride = true;
-                }},
-                Command{"clear", "", [this](arg_t){
-                    m_enableOverride = false;
-                }}
-            };
+                const std::array<Command, 3> c_overrideCommands{
+                    Command{"", "", [this](arg_t){
+                        if(m_enableOverride) Serial.println("telemetry is disabled");
+                        else Serial.println("telemetry is enabled");
+                    }},
+                    Command{"set", "", [this](arg_t){
+                        m_enableOverride = true;
+                    }},
+                    Command{"clear", "", [this](arg_t){
+                        m_enableOverride = false;
+                    }}
+                };
             // ===========================
             //list of subcommands
             const std::array<CommandList, 4> c_rootChildren{

@@ -11,16 +11,21 @@ using namespace Airbrakes::Controls;
 
 
 Controller::Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer) : 
-    m_name(name), m_flightPlan(plan), m_observer(observer), m_clockPeriod(clockPeriod), m_isActive(false){}
+    m_name(name), m_flightPlan(plan), m_observer(observer), m_fault(false), m_clockPeriod(clockPeriod), m_isActive(false){}
 
 RocketOS::Shell::CommandList Controller::getCommands() const{
     return {"controller", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
 }
 
-void Controller::start(){
+error_t Controller::start(){
     m_clock.end();
+    if(newFlight() != error_t::GOOD){
+        m_isActive = false;
+        return error_t::ERROR;
+    }
     m_clock.begin([this](){this->clock();}, m_clockPeriod);
     m_isActive = true;
+    return error_t::GOOD;
 }
 
 void Controller::stop(){
@@ -37,8 +42,27 @@ bool Controller::isActive(){
 }
 
 void Controller::clock(){
-    m_flightPathVelocityPartial = m_flightPlan.getVelocityPartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
-    m_flightPathAnglePartial = m_flightPlan.getAnglePartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
+    //read current state from the observer
+    float_t currentAltitude = m_observer.getAltitude();
+    float_t currentVerticalVelocity = m_observer.getVeritcalVelocity();
+    float_t currentAngle = m_observer.getAngleToHorizontal();
+    //get flight path parameters from flight plan
+    if(!m_flightPlan.isLoaded()){
+        if(m_fault == false);//log error
+        m_fault = true;
+    }
+    m_flightPath = m_flightPlan.getAltitude(currentVerticalVelocity, currentAngle);
+    m_flightPathVelocityPartial = m_flightPlan.getVelocityPartial(currentVerticalVelocity, currentAngle);
+    m_flightPathAnglePartial = m_flightPlan.getAnglePartial(currentVerticalVelocity, currentAngle);
+    //use update rule to compute base airbrake deployment
+    m_error = currentAltitude - m_flightPath;
+    if(!m_updateRuleClamped) m_updateRuleDragArea = updateRule(m_error, currentVerticalVelocity, currentAngle, currentAltitude, m_flightPathVelocityPartial, m_flightPathAnglePartial);
+    if(currentVerticalVelocity < m_updateRuleShutdownVelocity) m_updateRuleClamped = true;
+    //fine tune deployment with accumulator
+    m_adjustedDragArea = m_updateRuleDragArea;
+    //limit control input to the physical range of the actuators
+    m_requestedDragArea = getBestPossibleDragArea(m_adjustedDragArea, m_error);
+    if(m_requestedDragArea != m_adjustedDragArea) m_isSaturated = true;
 }
 
 //helpers
@@ -47,7 +71,7 @@ float_t Controller::airDensity(float_t altitude) const{
     return m_flightPlan.getGroundPressure() * MOLAR_MASS_OF_DRY_AIR / (IDEAL_GAS_CONSTANT * m_flightPlan.getGroundTemperature()) * std::pow(1-TEMPERATURE_LAPSE_RATE * altitude / m_flightPlan.getGroundTemperature(), GRAVITATIONAL_CONSTANT * MOLAR_MASS_OF_DRY_AIR / (IDEAL_GAS_CONSTANT * TEMPERATURE_LAPSE_RATE)-1);
 }
 
-float_t Controller::updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude) const{
+float_t Controller::updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude, float_t velocityPartial, float_t anglePartial) const{
     /*Formula
                     2 * mass * sin(angle) * (decayRate * error - verticalVelocity - g * (pathPartialVelocity + pathPartialAngle * sin(2 * angle) / (2 * verticalVelocity)))
     dragArea   =    -------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -55,7 +79,21 @@ float_t Controller::updateRule(float_t error, float_t verticalVelocity, float_t 
     
     Derrived from 2d rocket dynamics
     */
-    return 2 * m_flightPlan.getDryMass() * std::sin(angle) * (m_decayRate * error - verticalVelocity - GRAVITATIONAL_CONSTANT * (m_flightPlan.getVelocityPartial(verticalVelocity, angle) + m_flightPlan.getAnglePartial(verticalVelocity, angle) * std::sin(2 * angle) / (2 * verticalVelocity))) / (airDensity(altitude) * verticalVelocity * verticalVelocity * m_flightPlan.getVelocityPartial(verticalVelocity, angle));
+    return 2 * m_flightPlan.getDryMass() * std::sin(angle) * (m_decayRate * error - verticalVelocity - GRAVITATIONAL_CONSTANT * (velocityPartial + anglePartial * std::sin(2 * angle) / (2 * verticalVelocity))) / (airDensity(altitude) * verticalVelocity * verticalVelocity * velocityPartial);
+}
+
+float_t Controller::getBestPossibleDragArea(float_t dragArea, float_t error) const{
+    if(dragArea <= m_flightPlan.getMaxDragArea() && dragArea >= m_flightPlan.getMinDragArea()) return dragArea;
+    if(error > 0) return m_flightPlan.getMaxDragArea();
+    return m_flightPlan.getMinDragArea();
+}
+
+error_t Controller::newFlight(){
+    if(!m_flightPlan.isLoaded()) return error_t::ERROR;
+    m_updateRuleClamped = false;
+    m_isSaturated = false;
+    m_requestedDragArea = m_flightPlan.getMinDragArea();
+    return error_t::GOOD;
 }
 
 //references
@@ -67,10 +105,42 @@ bool& Controller::getActiveFlagRef(){
     return m_isActive;
 }
 
+
+const float_t& Controller::getErrorRef() const{
+    return m_error;
+}
+const float_t& Controller::getFlightPathRef() const{
+    return m_flightPath;
+}
 const float_t& Controller::getVPartialRef() const{
     return m_flightPathVelocityPartial;
 }
 
 const float_t& Controller::getAnglePartialRef() const{
     return m_flightPathAnglePartial;
+}
+
+const float_t& Controller::getUpdateRuleDragRef() const{
+    return m_updateRuleDragArea;
+}
+
+const float_t& Controller::getAdjustedDragRef() const{
+    return m_adjustedDragArea;
+}
+
+const float_t& Controller::getRequestedDragRef() const{
+    return m_requestedDragArea;
+}
+
+
+const bool& Controller::getClampFlagRef() const{
+    return m_updateRuleClamped;
+}
+
+const bool& Controller::getSaturationFlagRef() const{
+    return m_isSaturated;
+}
+
+const bool& Controller::getFaultFlagRef() const{
+    return m_fault;
 }

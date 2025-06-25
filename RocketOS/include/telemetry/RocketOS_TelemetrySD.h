@@ -25,6 +25,7 @@ namespace RocketOS{
             static result_t<char*> printToBuffer(char* buffer, uint_t size, const int_t& value);
             static result_t<char*> printToBuffer(char* buffer, uint_t size, const uint_t& value);
             static result_t<char*> printToBuffer(char* buffer, uint_t size, const float_t& value);
+            static result_t<char*> printToBuffer(char* buffer, uint_t size, const bool& value);
         };
         
         

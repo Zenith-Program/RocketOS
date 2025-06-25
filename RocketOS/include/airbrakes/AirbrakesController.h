@@ -13,8 +13,11 @@ namespace Airbrakes{
             const FlightPlan& m_flightPlan;
             const Observer& m_observer;
 
-            //controls
-            float_t m_error, m_flightPath, m_flightPathVelocityPartial, m_flightPathAnglePartial, m_requestedDragArea, m_updateRuleDragArea, m_isSaturated;
+            //control signals
+            float_t m_error, m_flightPath, m_flightPathVelocityPartial, m_flightPathAnglePartial, m_updateRuleDragArea, m_adjustedDragArea, m_requestedDragArea;
+
+            //state flags
+            bool m_updateRuleClamped, m_isSaturated, m_fault;
 
             //parameters
             float_t m_decayRate, m_updateRuleShutdownVelocity;
@@ -29,7 +32,7 @@ namespace Airbrakes{
 
             RocketOS::Shell::CommandList getCommands() const;
 
-            void start();
+            error_t start();
             void stop();
             void resetInit();
             bool isActive();
@@ -40,12 +43,24 @@ namespace Airbrakes{
             //acessors to references for peristent storage, telemetry and HIL systems
             uint_t& getClockPeriodRef();
             bool& getActiveFlagRef();
+
+            const float_t& getErrorRef() const;
+            const float_t& getFlightPathRef() const;
             const float_t& getVPartialRef() const;
             const float_t& getAnglePartialRef() const;
+            const float_t& getUpdateRuleDragRef() const;
+            const float_t& getAdjustedDragRef() const;
+            const float_t& getRequestedDragRef() const;
+
+            const bool& getClampFlagRef() const;
+            const bool& getSaturationFlagRef() const;
+            const bool& getFaultFlagRef() const;
 
         private:
             float_t airDensity(float_t altitude) const;
-            float_t updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude) const;
+            float_t updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude, float_t velocityPartial, float_t anglePartial) const;
+            float_t getBestPossibleDragArea(float_t dragArea, float_t error) const;
+            error_t newFlight();
         private:
             // ######### command structure #########
             using Command = RocketOS::Shell::Command;
@@ -75,7 +90,7 @@ namespace Airbrakes{
             // command list
             const std::array<Command, 2> c_rootCommands{
                 Command{"start", "", [this](arg_t){
-                    start();
+                    if(start() != error_t::GOOD) Serial.println("Error starting the controller");//log message
                 }},
                 Command{"stop", "", [this](arg_t){
                     stop();

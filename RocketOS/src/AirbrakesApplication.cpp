@@ -19,21 +19,32 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         DataLogSettings<float_t>{m_observer.getHorizontalVelocityRef(), "predicted x velocity"},
         DataLogSettings<float_t>{m_observer.getVerticalVelocityRef(), "predicted y velocity"},
         DataLogSettings<float_t>{m_observer.getAngleRef(), "predicted angle"},
-        DataLogSettings<float_t>{m_observer.getAngularVelocityRef(), "predicted angular velocity"}
+        DataLogSettings<float_t>{m_observer.getAngularVelocityRef(), "predicted angular velocity"},
+        DataLogSettings<float_t>{m_controller.getErrorRef(), "controller error"},
+        DataLogSettings<float_t>{m_controller.getFlightPathRef(), "flight path"},
+        DataLogSettings<float_t>{m_controller.getVPartialRef(), "flght path velocity partial derivative"},
+        DataLogSettings<float_t>{m_controller.getAnglePartialRef(), "flght path angle partial derivative"},
+        DataLogSettings<float_t>{m_controller.getUpdateRuleDragRef(), "update rule drag area"},
+        DataLogSettings<float_t>{m_controller.getAdjustedDragRef(), "adjusted drag area"},
+        DataLogSettings<float_t>{m_controller.getRequestedDragRef(), "requested drag area"},
+        DataLogSettings<bool>{m_controller.getClampFlagRef(), "update rule shutdown"},
+        DataLogSettings<bool>{m_controller.getSaturationFlagRef(), "controller saturation"},
+        DataLogSettings<bool>{m_controller.getFaultFlagRef(), "controller fault"}
     ),
     m_log("log", m_sdCard, logBuffer, logBufferSize, Airbrakes_CFG_DefaultLogFile),
 
     //persistent systems
     m_persistent("persistent",
-        EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), 50, "controller clock period"},
+        EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), Airbrakes_CFG_ControllerPeriod_us, "controller clock period"},
         EEPROMSettings<bool>{m_controller.getActiveFlagRef(), false, "controller flag"},
         EEPROMSettings<bool>{m_telemetry.getOverrideRef(), false, "telemetry override"},
+        EEPROMSettings<bool>{m_log.getOverrideFlagRef(), false, "log override"},
         EEPROMSettings<FileName_t>{m_log.getNameBufferRef(), Airbrakes_CFG_DefaultLogFile, "log file name"},
         EEPROMSettings<FileName_t>{m_telemetry.getNameBufferRef(), Airbrakes_CFG_DefaultTelemetryFile, "telemetry file name"},
         EEPROMSettings<FileName_t>{m_flightPlan.getFileNameRef(), Airbrakes_CFG_DefaultFlightPlanFileName,"flight plan file"},
-        EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), 100, "telemetry refresh"},
+        EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), Airbrakes_CFG_TelemetryRefreshPeriod_ms, "telemetry refresh"},
         EEPROMSettings<bool>{m_HILEnabled, false, "simulation mode"},
-        EEPROMSettings<uint_t>{m_HILRefreshPeriod, 10, "simulation refresh"}
+        EEPROMSettings<uint_t>{m_HILRefreshPeriod, Airbrakes_CFG_HILRefresh_ms, "simulation refresh"}
     ),
 
     //serial systems
@@ -41,12 +52,17 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
 
     //simulation systems
     m_TxHIL(
-        m_controller.getVPartialRef(),
-        m_controller.getAnglePartialRef(),
+        m_controller.getRequestedDragRef(),
+        m_controller.getFlightPathRef(),
+        m_controller.getErrorRef(),
+        m_controller.getUpdateRuleDragRef(),
+        m_controller.getAdjustedDragRef(),
+        m_observer.getAltitudeRef(),
         m_observer.getVerticalVelocityRef(),
         m_observer.getAngleRef()
     ),
     m_RxHIL(m_inputBuffer, 
+        m_observer.getAltitudeRef(),
         m_observer.getVerticalVelocityRef(),
         m_observer.getAngleRef()
     ),

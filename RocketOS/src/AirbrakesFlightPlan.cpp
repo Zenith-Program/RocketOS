@@ -13,7 +13,7 @@ static const error_t LOGIC_ERROR = error_t(3);
 //===================
 
 FlightPlan::FlightPlan(const char* name, SdFat& sd, float_t* memory, uint_t size, const char* file) : m_name(name), m_sd(sd), m_memory(memory), m_memorySize(size), m_isLoaded(false){
-    std::strncpy(m_fileName.data(), file, m_fileName.size()-1);
+    strncpy(m_fileName.data(), file, m_fileName.size()-1);
 }
 
 RocketOS::Shell::CommandList FlightPlan::getCommands(){
