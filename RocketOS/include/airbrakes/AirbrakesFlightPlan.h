@@ -71,7 +71,7 @@ namespace Airbrakes{
 
             // === ROOT COMMAND LIST ===
                 //list of local commands
-                const std::array<Command, 3> c_rootCommands = {
+                const std::array<Command, 4> c_rootCommands = {
                     Command{"properties", "", [this](arg_t){
                         if(isLoaded()){
                              Serial.printf("Flight plan '%s':\n", m_fileName.data());
@@ -97,7 +97,7 @@ namespace Airbrakes{
                         else if(error == error_t(4)) Serial.printf("Failed to open flight plan with file name '%s'\n", getFileName());
                         else Serial.println("Failed to load the flight plan");
                     }},
-                    Command{"probe", "ff", [this](arg_t args){
+                    Command{"altitude", "ff", [this](arg_t args){
                         float_t velocity = args[0].getFloatData();
                         float_t angle_deg = args[1].getFloatData();
                         if(!isLoaded()) Serial.println("No flight plan is loaded");
@@ -105,6 +105,16 @@ namespace Airbrakes{
                             result_t<float_t> result = getAltitude(velocity, angle_deg * PI /180);
                             if(result.error != error_t::GOOD) Serial.println("Value is out of range");
                             else Serial.printf("%.2f m\n", result.data);
+                        }
+                    }},
+                    Command{"gradient", "ff", [this](arg_t args){
+                        float_t velocity = args[0].getFloatData();
+                        float_t angle_deg = args[1].getFloatData();
+                        if(!isLoaded()) Serial.println("No flight plan is loaded");
+                        else{
+                            float_t velocityPartial = getVelocityPartial(velocity, angle_deg * PI /180);
+                            float_t anglePartial = getAnglePartial(velocity, angle_deg * PI /180);
+                            Serial.printf("<%.2f, %.2f>\n", velocityPartial, anglePartial);
                         }
                     }}
                 };

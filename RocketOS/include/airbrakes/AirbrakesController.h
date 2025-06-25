@@ -73,7 +73,7 @@ namespace Airbrakes{
                 CommandList{"period", c_periodCommands.data(), c_periodCommands.size(), nullptr, 0},
             };
             // command list
-            const std::array<Command, 3> c_rootCommands{
+            const std::array<Command, 2> c_rootCommands{
                 Command{"start", "", [this](arg_t){
                     start();
                 }},

@@ -38,7 +38,7 @@ bool Controller::isActive(){
 
 void Controller::clock(){
     m_flightPathVelocityPartial = m_flightPlan.getVelocityPartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
-    m_flightPathAnglePartial = m_flightPlan.getVelocityPartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
+    m_flightPathAnglePartial = m_flightPlan.getAnglePartial(m_observer.getVeritcalVelocity(), m_observer.getAngleToHorizontal());
 }
 
 //helpers
