@@ -11,7 +11,7 @@ using namespace RocketOS::Simulation;
 
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //control syatems
-    m_controller("controller", 100000, m_flightPlan, m_observer),
+    m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
     //telemetry systems
     m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
@@ -44,7 +44,9 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<FileName_t>{m_flightPlan.getFileNameRef(), Airbrakes_CFG_DefaultFlightPlanFileName,"flight plan file"},
         EEPROMSettings<uint_t>{m_telemetry.getRefreshPeriodRef(), Airbrakes_CFG_TelemetryRefreshPeriod_ms, "telemetry refresh"},
         EEPROMSettings<bool>{m_HILEnabled, false, "simulation mode"},
-        EEPROMSettings<uint_t>{m_HILRefreshPeriod, Airbrakes_CFG_HILRefresh_ms, "simulation refresh"}
+        EEPROMSettings<uint_t>{m_HILRefreshPeriod, Airbrakes_CFG_HILRefresh_ms, "simulation refresh"},
+        EEPROMSettings<float_t>{m_controller.getDecayRateRef(), Airbrakes_CFG_DecayRate, "controller decay rate"},
+        EEPROMSettings<float_t>{m_controller.getCoastVelocityRef(), 0, "controller coast velocity"}
     ),
 
     //serial systems

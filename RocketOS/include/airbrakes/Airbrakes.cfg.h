@@ -16,5 +16,6 @@
 #define Airbrakes_CFG_DefaultFlightPlanFileName "flightPath.csv"
 
 #define Airbrakes_CFG_ControllerPeriod_us 100000
+#define Airbrakes_CFG_DecayRate -5
 
 #define Airbrakes_CFG_HILRefresh_ms 10

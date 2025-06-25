@@ -10,8 +10,8 @@ using namespace Airbrakes::Controls;
 #define MOLAR_MASS_OF_DRY_AIR 0.0289652     //unit: kg/mol
 
 
-Controller::Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer) : 
-    m_name(name), m_flightPlan(plan), m_observer(observer), m_fault(false), m_clockPeriod(clockPeriod), m_isActive(false){}
+Controller::Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer, float_t decayRate) : 
+    m_name(name), m_flightPlan(plan), m_observer(observer), m_fault(false), m_decayRate(decayRate), m_updateRuleShutdownVelocity(0), m_clockPeriod(clockPeriod), m_isActive(false){}
 
 RocketOS::Shell::CommandList Controller::getCommands() const{
     return {"controller", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
@@ -56,8 +56,12 @@ void Controller::clock(){
     m_flightPathAnglePartial = m_flightPlan.getAnglePartial(currentVerticalVelocity, currentAngle);
     //use update rule to compute base airbrake deployment
     m_error = currentAltitude - m_flightPath;
-    if(!m_updateRuleClamped) m_updateRuleDragArea = updateRule(m_error, currentVerticalVelocity, currentAngle, currentAltitude, m_flightPathVelocityPartial, m_flightPathAnglePartial);
-    if(currentVerticalVelocity < m_updateRuleShutdownVelocity) m_updateRuleClamped = true;
+    if(currentVerticalVelocity < m_updateRuleShutdownVelocity){
+         m_updateRuleClamped = true;
+    }
+    else{
+        m_updateRuleDragArea = updateRule(m_error, currentVerticalVelocity, currentAngle, currentAltitude, m_flightPathVelocityPartial, m_flightPathAnglePartial);
+    }
     //fine tune deployment with accumulator
     m_adjustedDragArea = m_updateRuleDragArea;
     //limit control input to the physical range of the actuators
@@ -143,4 +147,13 @@ const bool& Controller::getSaturationFlagRef() const{
 
 const bool& Controller::getFaultFlagRef() const{
     return m_fault;
+}
+
+
+float_t& Controller::getDecayRateRef(){
+    return m_decayRate;
+}
+
+float_t& Controller::getCoastVelocityRef(){
+    return m_updateRuleShutdownVelocity;
 }

@@ -51,7 +51,9 @@ namespace Airbrakes{
             FileName_t,     //flight plan file name
             uint_t,         //telemetry refresh period
             bool,           //simulation mode enable
-            uint_t          //simulation refresh period
+            uint_t,         //simulation refresh period
+            float_t,        //controller decay rate
+            float_t         //controller coast velocity
         > m_persistent;
 
         // --- serial port systems ---

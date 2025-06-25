@@ -28,7 +28,7 @@ namespace Airbrakes{
             bool m_isActive;
             
         public:
-            Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer);
+            Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer, float_t decayDate);
 
             RocketOS::Shell::CommandList getCommands() const;
 
@@ -56,6 +56,9 @@ namespace Airbrakes{
             const bool& getSaturationFlagRef() const;
             const bool& getFaultFlagRef() const;
 
+            float_t& getDecayRateRef();
+            float_t& getCoastVelocityRef();
+
         private:
             float_t airDensity(float_t altitude) const;
             float_t updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude, float_t velocityPartial, float_t anglePartial) const;
@@ -82,10 +85,41 @@ namespace Airbrakes{
                     };
                 // ===========================
 
+                // === DECAY RATE COMMAND LIST ===
+                    //command list
+                    const std::array<Command, 2> c_decayCommands{
+                        Command{"", "", [this](arg_t){
+                            Serial.println(m_decayRate);
+                        }},
+                        Command{"set", "f", [this](arg_t args){
+                            float_t newDecayRate = args[0].getFloatData();
+                            if(newDecayRate >=0) Serial.println("Warning: Decay rate should probably be negative");
+                            m_decayRate = newDecayRate;
+                        }}
+                    };
+                // ===============================
+
+                // === COAST VELOCITY COMMAND LIST ===
+                    //command list
+                    const std::array<Command, 2> c_coastCommands{
+                        Command{"", "", [this](arg_t){
+                            Serial.print(m_updateRuleShutdownVelocity);
+                            Serial.println("m/s");
+                        }},
+                        Command{"set", "f", [this](arg_t args){
+                            float_t newVelocity = args[0].getFloatData();
+                            if(newVelocity < 0) Serial.println("Value should be positive");
+                            else m_updateRuleShutdownVelocity = newVelocity;
+                        }}
+                    };
+                // ===================================
+
             // --------------------------------
             // subcommand list
-            const std::array<CommandList, 1> c_rootChildren{
+            const std::array<CommandList, 3> c_rootChildren{
                 CommandList{"period", c_periodCommands.data(), c_periodCommands.size(), nullptr, 0},
+                CommandList{"decay", c_decayCommands.data(), c_decayCommands.size(), nullptr, 0},
+                CommandList{"coast", c_coastCommands.data(), c_coastCommands.size(), nullptr, 0}
             };
             // command list
             const std::array<Command, 2> c_rootCommands{
