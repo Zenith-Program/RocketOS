@@ -10,6 +10,8 @@ using namespace RocketOS::Simulation;
 
 
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
+    //sensors
+    m_altimeter("altimeter", Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
     //control syatems
     m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
@@ -46,7 +48,8 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<bool>{m_HILEnabled, false, "simulation mode"},
         EEPROMSettings<uint_t>{m_HILRefreshPeriod, Airbrakes_CFG_HILRefresh_ms, "simulation refresh"},
         EEPROMSettings<float_t>{m_controller.getDecayRateRef(), Airbrakes_CFG_DecayRate, "controller decay rate"},
-        EEPROMSettings<float_t>{m_controller.getCoastVelocityRef(), 0, "controller coast velocity"}
+        EEPROMSettings<float_t>{m_controller.getCoastVelocityRef(), 0, "controller coast velocity"},
+        EEPROMSettings<uint_t>{m_altimeter.getSPIFrequencyRef(), Airbrakes_CFG_AltimeterSPIFrequency, "altimeter SPI Speed"}
     ),
 
     //serial systems
@@ -104,6 +107,12 @@ void Application::initialize(){
         else Serial.println("Failed to load the flight plan");
         error = error_t::ERROR;
     }
+    //init sensors
+    if(m_altimeter.initialize() != error_t::GOOD){
+        Serial.println("Failed to initialize the altimeter");
+        error = error_t::ERROR;
+    }
+    else Serial.println("Initialized the altimeter");
     //start timers
     m_controller.resetInit();
     Serial.println("Initialized the controller");

@@ -6,6 +6,7 @@
 #include "AirbrakesController.h"
 #include "AirbrakesFlightPlan.h"
 #include "AirbrakesObserver.h"
+#include "AirbrakesSensors_Altimeter.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 namespace Airbrakes{
@@ -13,6 +14,7 @@ namespace Airbrakes{
     class Application{
     private:
         // --- sensor readings ---
+        Sensors::BarometerSPI m_altimeter;
 
         // --- control system ---
         Controls::Controller m_controller;
@@ -53,7 +55,8 @@ namespace Airbrakes{
             bool,           //simulation mode enable
             uint_t,         //simulation refresh period
             float_t,        //controller decay rate
-            float_t         //controller coast velocity
+            float_t,        //controller coast velocity
+            uint_t          //altimeter SPI speed
         > m_persistent;
 
         // --- serial port systems ---
@@ -127,13 +130,14 @@ namespace Airbrakes{
                 };
             // =============================
             //list of subcommands
-            const std::array<CommandList, 6> c_rootChildren{
+            const std::array<CommandList, 7> c_rootChildren{
                 m_controller.getCommands(),
                 m_flightPlan.getCommands(),
                 m_log.getCommands(),
                 m_telemetry.getCommands(),
                 m_persistent.getCommands(),
-                CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()}
+                CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()},
+                m_altimeter.getCommands()
             };
             //list of local commands
             const std::array<Command, 4> c_rootCommands{

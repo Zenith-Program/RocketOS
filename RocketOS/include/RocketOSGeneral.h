@@ -94,6 +94,7 @@ namespace RocketOS{
 
         operator T() const {return data;} 
         operator error_t() const {return error;} 
+        inline result_t() : error(error_t::GOOD){}
         inline result_t(T newData) : data(newData), error(error_t::GOOD){}
         inline result_t(error_t newError) : error(newError) {}
         inline result_t(T newData, error_t newError) : data(newData), error(newError) {}

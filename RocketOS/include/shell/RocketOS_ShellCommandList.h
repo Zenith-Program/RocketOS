@@ -1,6 +1,5 @@
 #pragma once
 #include "RocketOS_ShellToken.h"
-#include <inplace_function.h>
 
 /*Command Tree (Command & CommandList)
  * Commands are structured as a series of tokens seperated by spaces. For more info on how tokens work look at the README or the file RocketOS_ShellToken.h
@@ -34,16 +33,31 @@
  *          SubCommand2: Commands - SubCommand1, SubCommand2 | ChildrenCommandLists - NONE
 */
 
+
+/*Command Callback
+* Command callbacks store the a function to implement a command. 
+* They can be function pointers, non-capturing lambdas, or capturing lambdas with a sufficiently small size (max size can be changed in the shell config file).
+* const Shell::Token* must be the type of the sole parameter for a command callback function. The type alias Shell::arg_t can also be used. 
+* An array of Tokens is passed to the command callback function through this single parameter. This array can be indexed by the command callback to acess whatever parameters the command expects.
+*/
+#ifndef RocketOS_Shell_UsingTeensyTimerTool
+#include <inplace_function.h>
 namespace RocketOS{
     namespace Shell{
-        /*Command Callback
-         * Command callbacks store the a function to implement a command. 
-         * They can be function pointers, non-capturing lambdas, or capturing lambdas with a sufficiently small size (max size can be changed in the shell config file).
-         * const Shell::Token* must be the type of the sole parameter for a command callback function. The type alias Shell::arg_t can also be used. 
-         * An array of Tokens is passed to the command callback function through this single parameter. This array can be indexed by the command callback to acess whatever parameters the command expects.
-        */
         using commandCallback_t = teensy::inplace_function<void(const Shell::Token*), RocketOS_Shell_CommandCallbackCaptureSize>;
+    }
+}
+#else
+#include <TeensyTimerTool.h>
+namespace RocketOS{
+    namespace Shell{
+        using commandCallback_t = TeensyTimerTool::stdext::inplace_function<void(const Shell::Token*), RocketOS_Shell_CommandCallbackCaptureSize>;
+    }
+}
+#endif
 
+namespace RocketOS{
+    namespace Shell{
         /*Command
          * Commands are defined by a name, argument list, and callback function. 
          * The name "" is used to define a default inplementation for the parent command list. Names of commands should be unique within the same command list and cannot contain spaces or reserved characters.

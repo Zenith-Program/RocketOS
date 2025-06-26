@@ -19,3 +19,5 @@
 #define Airbrakes_CFG_DecayRate -5
 
 #define Airbrakes_CFG_HILRefresh_ms 10
+
+#define Airbrakes_CFG_AltimeterSPIFrequency 4000000

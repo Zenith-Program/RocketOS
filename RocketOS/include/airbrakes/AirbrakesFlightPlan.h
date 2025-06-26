@@ -75,11 +75,11 @@ namespace Airbrakes{
                     Command{"properties", "", [this](arg_t){
                         if(isLoaded()){
                              Serial.printf("Flight plan '%s':\n", m_fileName.data());
-                             Serial.printf("Target apogee: %.2f m\n", m_targetApogee);
-                             Serial.printf("Effective drag area range: %.4f m^2 - %.4f m^2\n", m_minimumDragArea, m_maximumDragArea);
-                             Serial.printf("Dry mass: %.2f kg\n", m_dryMass);
-                             Serial.printf("Launch site conditions: %.2f celcius at %.2f pa\n", m_groundLevelTemperature - 273.15, m_groundLevelPressure);
-                             Serial.printf("Vertical velocity range: 0 m/s - %.2f m/s with %d samples\n", m_maxVelocity, m_numVelocitySamples);
+                             Serial.printf("Target apogee: %.2fm\n", m_targetApogee);
+                             Serial.printf("Effective drag area range: %.4fm^2 - %.4fm^2\n", m_minimumDragArea, m_maximumDragArea);
+                             Serial.printf("Dry mass: %.2fkg\n", m_dryMass);
+                             Serial.printf("Launch site conditions: %.2fC at %.2fpa\n", m_groundLevelTemperature - 273.15, m_groundLevelPressure);
+                             Serial.printf("Vertical velocity range: 0m/s - %.2fm/s with %d samples\n", m_maxVelocity, m_numVelocitySamples);
                              Serial.printf("Angle with horizontal range: 0 degrees - %.2f degrees with %d samples\n", c_maxAngle * 180 / PI, m_numAngleSamples);
                              Serial.printf("Using %d kB of available %d kB storage\n", m_numAngleSamples * m_numVelocitySamples * 4 / 1024, m_memorySize * 4 / 1024);
                         }
@@ -104,7 +104,7 @@ namespace Airbrakes{
                         else{
                             result_t<float_t> result = getAltitude(velocity, angle_deg * PI /180);
                             if(result.error != error_t::GOOD) Serial.println("Value is out of range");
-                            else Serial.printf("%.2f m\n", result.data);
+                            else Serial.printf("%.2fm\n", result.data);
                         }
                     }},
                     Command{"gradient", "ff", [this](arg_t args){
