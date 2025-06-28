@@ -13,7 +13,7 @@ using namespace Sensors;
 
 //timings
 #define RESET_SIGNAL_DURRATION_us 100
-#define WAKE_TIMEOUT_us 20000
+#define WAKE_TIMEOUT_us 200000
 
 BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized){}
 error_t BNO085_SPI::initialize(){
@@ -58,6 +58,7 @@ error_t BNO085_SPI::wake(){
     digitalWriteFast(P0_PIN, LOW);
     elapsedMicros timeout = 0;
     while(m_state != IMUStates::Operational && timeout < WAKE_TIMEOUT_us);
+    //Serial.println(static_cast<uint_t>(timeout));
     if(m_state == IMUStates::Operational) return error_t::GOOD;
     return error_t::ERROR;
 }
