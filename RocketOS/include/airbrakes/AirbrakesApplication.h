@@ -7,6 +7,7 @@
 #include "AirbrakesFlightPlan.h"
 #include "AirbrakesObserver.h"
 #include "AirbrakesSensors_Altimeter.h"
+#include "AirbrakesSensors_IMU.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 namespace Airbrakes{
@@ -14,8 +15,8 @@ namespace Airbrakes{
     class Application{
     private:
         // --- sensor readings ---
-        Sensors::BarometerSPI m_altimeter;
-
+        Sensors::MS5607_SPI m_altimeter;
+        Sensors::BNO085_SPI m_IMU;
         // --- control system ---
         Controls::Controller m_controller;
         Controls::FlightPlan m_flightPlan;

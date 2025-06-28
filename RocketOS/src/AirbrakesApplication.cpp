@@ -12,6 +12,7 @@ using namespace RocketOS::Simulation;
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //sensors
     m_altimeter("altimeter", Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
+    m_IMU("IMU", Airbrakes_CFG_IMU_SPIFrequency),
     //control syatems
     m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
@@ -107,12 +108,18 @@ void Application::initialize(){
         else Serial.println("Failed to load the flight plan");
         error = error_t::ERROR;
     }
-    //init sensors
+    //init altimeter
     if(m_altimeter.initialize() != error_t::GOOD){
         Serial.println("Failed to initialize the altimeter");
         error = error_t::ERROR;
     }
     else Serial.println("Initialized the altimeter");
+    //init IMU
+    if(m_IMU.initialize() != error_t::GOOD){
+        Serial.println("Failed to initialize the IMU");
+        error = error_t::ERROR;
+    }
+    else Serial.println("Initialized the IMU");
     //start timers
     m_controller.resetInit();
     Serial.println("Initialized the controller");

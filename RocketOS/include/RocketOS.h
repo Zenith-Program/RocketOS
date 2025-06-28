@@ -18,3 +18,6 @@
 #ifdef RocketOS_CFG_HasProcessing
 #include "processing\RocketOS_Processing.h"
 #endif
+#ifdef RocketOS_CFG_HasUtilities
+#include "utilities\RocketOS_Utilities.h"
+#endif

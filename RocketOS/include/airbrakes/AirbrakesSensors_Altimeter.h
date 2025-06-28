@@ -5,7 +5,7 @@
 
 namespace Airbrakes{
     namespace Sensors{
-        class BarometerSPI{
+        class MS5607_SPI{
         private:
             static constexpr uint_t c_numCalibrationCoefficients = 8;
             const char* const m_name;
@@ -20,7 +20,7 @@ namespace Airbrakes{
             float_t m_temperature_k;
             float_t m_altitude_m;
         public:
-            BarometerSPI(const char*, uint_t, TeensyTimerTool::TimerGenerator*);
+            MS5607_SPI(const char*, uint_t, TeensyTimerTool::TimerGenerator*);
             error_t initialize();
             bool initialized() const;
             error_t updateBlocking();

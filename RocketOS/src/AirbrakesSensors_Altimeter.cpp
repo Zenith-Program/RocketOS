@@ -12,13 +12,13 @@ using namespace Sensors;
 #define TEMPERATURE_CONVERSION_COMMAND 0x58
 #define ADC_READ_COMMAND 0x00
 
-BarometerSPI::BarometerSPI(const char* name, uint_t frequency, TeensyTimerTool::TimerGenerator* timer) : m_name(name), m_SPIFrequency(frequency), m_timer(timer), m_inAsyncUpdate(false), m_newData(false) {}
+MS5607_SPI::MS5607_SPI(const char* name, uint_t frequency, TeensyTimerTool::TimerGenerator* timer) : m_name(name), m_SPIFrequency(frequency), m_timer(timer), m_inAsyncUpdate(false), m_newData(false) {}
 
-RocketOS::Shell::CommandList BarometerSPI::getCommands(){
+RocketOS::Shell::CommandList MS5607_SPI::getCommands(){
     return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootCommandList.data(), c_rootCommandList.size()};
 }
 
-error_t BarometerSPI::initialize(){
+error_t MS5607_SPI::initialize(){
     //configuration into SPI mode
 
     //setup SPI
@@ -39,11 +39,11 @@ error_t BarometerSPI::initialize(){
     return error_t::GOOD;
 }
 
-bool BarometerSPI::initialized() const{
+bool MS5607_SPI::initialized() const{
     return m_calibrationCoeffieicents[0] != 0;
 }
 
-error_t BarometerSPI::updateBlocking(){
+error_t MS5607_SPI::updateBlocking(){
     beginPressureConversion();
     delay(10);
     if(readPressureVal() != error_t::GOOD) return error_t::ERROR;
@@ -54,7 +54,7 @@ error_t BarometerSPI::updateBlocking(){
     return error_t::GOOD;
 }
 
-void BarometerSPI::updateAsync(){
+void MS5607_SPI::updateAsync(){
     if(!m_inAsyncUpdate){
         m_inAsyncUpdate = true;
         beginPressureConversion();
@@ -64,31 +64,31 @@ void BarometerSPI::updateAsync(){
 }
 
 
-result_t<float_t> BarometerSPI::getPressure(){
+result_t<float_t> MS5607_SPI::getPressure(){
     if(!initialized()) return error_t(2);
     if(updateBlocking() != error_t::GOOD) return error_t(3);
     updateOutputValues();
     return m_pressure_pa;
 }
-result_t<float_t> BarometerSPI::getTemperature(){
+result_t<float_t> MS5607_SPI::getTemperature(){
     if(!initialized()) return error_t(2);
     if(updateBlocking() != error_t::GOOD) return error_t(3);
     updateOutputValues();
     return m_temperature_k;
 }
 
-float_t BarometerSPI::getPressureAsync(){
+float_t MS5607_SPI::getPressureAsync(){
     updateOutputValues();
     return m_pressure_pa;
 }
 
-float_t BarometerSPI::getTemperatureAsync(){
+float_t MS5607_SPI::getTemperatureAsync(){
     updateOutputValues();
     return m_temperature_k;
 }
 
 //helper functions
-void BarometerSPI::resetDevice(){
+void MS5607_SPI::resetDevice(){
     SPI.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE0));
     digitalWrite(CS_PIN, LOW);
     SPI.transfer(RESET_COMMAND);
@@ -97,7 +97,7 @@ void BarometerSPI::resetDevice(){
     delay(5);
 }
 
-result_t<uint16_t> BarometerSPI::getCalibrationCoefficient(uint_t n){
+result_t<uint16_t> MS5607_SPI::getCalibrationCoefficient(uint_t n){
     if(n >= c_numCalibrationCoefficients) return error_t::ERROR;
     SPI.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE0));
     digitalWrite(CS_PIN, LOW);
@@ -109,11 +109,11 @@ result_t<uint16_t> BarometerSPI::getCalibrationCoefficient(uint_t n){
     return coeffecient;
 }
 
-void BarometerSPI::markAsUninitialized(){
+void MS5607_SPI::markAsUninitialized(){
     m_calibrationCoeffieicents[0] = 0;
 }
 
-void BarometerSPI::beginPressureConversion(){
+void MS5607_SPI::beginPressureConversion(){
     SPI.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE0));
     digitalWrite(CS_PIN, LOW);
     SPI.transfer(PRESSURE_CONVERSION_COMMAND);
@@ -121,7 +121,7 @@ void BarometerSPI::beginPressureConversion(){
     SPI.endTransaction();
 }
 
-void BarometerSPI::beginTemperatureConversion(){
+void MS5607_SPI::beginTemperatureConversion(){
     SPI.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE0));
     digitalWrite(CS_PIN, LOW);
     SPI.transfer(TEMPERATURE_CONVERSION_COMMAND);
@@ -129,7 +129,7 @@ void BarometerSPI::beginTemperatureConversion(){
     SPI.endTransaction();
 }
 
-error_t BarometerSPI::readPressureVal(){
+error_t MS5607_SPI::readPressureVal(){
     SPI.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE0));
     digitalWrite(CS_PIN, LOW);
     SPI.transfer(ADC_READ_COMMAND);
@@ -143,7 +143,7 @@ error_t BarometerSPI::readPressureVal(){
     return error_t::GOOD;
 }
 
-error_t BarometerSPI::readTemperatureVal(){
+error_t MS5607_SPI::readTemperatureVal(){
     SPI.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE0));
     digitalWrite(CS_PIN, LOW);
     SPI.transfer(ADC_READ_COMMAND);
@@ -157,20 +157,20 @@ error_t BarometerSPI::readTemperatureVal(){
     return error_t::GOOD;
 }
 
-void BarometerSPI::asyncStep1(){
+void MS5607_SPI::asyncStep1(){
     readPressureVal();
     beginTemperatureConversion();
     m_timer.begin([this]{this->asyncStep2();});
     m_timer.trigger(10000);
 }
 
-void BarometerSPI::asyncStep2(){
+void MS5607_SPI::asyncStep2(){
     readTemperatureVal();
     m_inAsyncUpdate = false;
     m_newData = true;
 }
 
-void BarometerSPI::updateOutputValues(){
+void MS5607_SPI::updateOutputValues(){
     if(m_newData){
        int32_t dT = static_cast<int32_t>(m_temperatureADC) - static_cast<int32_t>(m_calibrationCoeffieicents[5] << 8);
        int32_t TEMP = 29315 + ((dT*m_calibrationCoeffieicents[6]) >> 23);
@@ -183,6 +183,6 @@ void BarometerSPI::updateOutputValues(){
 }
 
 //references
-uint_t& BarometerSPI::getSPIFrequencyRef(){
+uint_t& MS5607_SPI::getSPIFrequencyRef(){
     return m_SPIFrequency;
 }

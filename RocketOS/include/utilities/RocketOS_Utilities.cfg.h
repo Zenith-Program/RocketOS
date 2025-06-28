@@ -1,0 +1,4 @@
+#pragma once
+
+#define RocketOS_Utilities_InterruptCallbackCaptureSize 4
+#define RocketOS_Utilities_NumberOfInterruptPins 41

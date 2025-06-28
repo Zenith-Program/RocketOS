@@ -23,8 +23,3 @@
 */
 #define RocketOS_Shell_CommandCallbackCaptureSize 4
 
-/*Teensy Timer Tool compatability
- * this define uses teensy timer tool's inplace function implementation to avoid conflicts. This only needs to be enabled if you are using teensy timer tool.
-*/
-#define RocketOS_Shell_UsingTeensyTimerTool
-//#undef RocketOS_Shell_UsingTeensyTimerTool

@@ -15,6 +15,7 @@
 #define RocketOS_CFG_HasTelemetry
 #define RocketOS_CFG_HasSimulation
 #define RocketOS_CFG_HasProcessing
+#define RocketOS_CFG_HasUtilities
 
 /*Architecure Type
  * 
@@ -27,6 +28,12 @@
  * 
 */
 #define RocketOS_CFG_SerialRxBufferSize 256
+
+/*Teensy Timer Tool compatability
+ * this define uses teensy timer tool's inplace function implementation to avoid conflicts. This only needs to be enabled if you are using teensy timer tool.
+*/
+#define RocketOS_CFG_UsingTeensyTimerTool
+//#undef RocketOS_Utilities_UsingTeensyTimerTool
 
 
 

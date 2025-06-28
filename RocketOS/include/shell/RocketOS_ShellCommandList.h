@@ -40,7 +40,7 @@
 * const Shell::Token* must be the type of the sole parameter for a command callback function. The type alias Shell::arg_t can also be used. 
 * An array of Tokens is passed to the command callback function through this single parameter. This array can be indexed by the command callback to acess whatever parameters the command expects.
 */
-#ifndef RocketOS_Shell_UsingTeensyTimerTool
+#ifndef RocketOS_CFG_UsingTeensyTimerTool
 #include <inplace_function.h>
 namespace RocketOS{
     namespace Shell{
