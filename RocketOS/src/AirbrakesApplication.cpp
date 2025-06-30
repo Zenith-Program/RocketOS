@@ -100,7 +100,7 @@ void Application::initialize(){
     else Serial.println("Initialized the SD card");
     //load flight plan
     error_t loadError = m_flightPlan.loadFromFile();
-    if(loadError == error_t::GOOD) Serial.printf("Sucesfully loaded flight plan from '%s'\n", m_flightPlan.getFileName());
+    if(loadError == error_t::GOOD) Serial.printf("Loaded flight plan from '%s'\n", m_flightPlan.getFileName());
     else{
         if(loadError == error_t(2)) Serial.printf("Formatting error encountered when loading flight plan from '%s'\n", m_flightPlan.getFileName());
         else if(loadError == error_t(3)) Serial.printf("Failed to load flight plan from '%s' due to lack of allocated memory\n", m_flightPlan.getFileName());
@@ -124,7 +124,7 @@ void Application::initialize(){
     m_controller.resetInit();
     Serial.println("Initialized the controller");
     //final message
-    if(error == error_t::GOOD) Serial.println("Sucesfully initialized all systems");
+    if(error == error_t::GOOD) Serial.println("Successfully initialized all systems");
     else Serial.println("Initialization complete, some systems failed to initialize");
 }
 

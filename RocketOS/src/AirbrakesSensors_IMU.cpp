@@ -27,6 +27,7 @@ using namespace Sensors;
 
 BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized){
     m_txBuffer.fill(0xFF);
+    m_rxBuffer.fill(0xFF);
     m_sequenceNumbers.fill(0);
 }
 
@@ -39,14 +40,15 @@ error_t BNO085_SPI::initialize(){
     digitalWriteFast(RESET_PIN, HIGH);
     //initialize interrupt pin
     pinMode(INTERRUPT_PIN, INPUT_PULLUP);
-    RocketOS::Utilities::inplaceInterrupt<INTERRUPT_PIN>::configureInterrupt([this](){this->serviceInterrupt();}, FALLING);
+    RocketOS::Utilities::inplaceInterrupt<INTERRUPT_PIN>::configureInterrupt([this](){this->serviceInterrupt();}, CHANGE);
     //initialize select pin
     pinMode(CS_PIN, OUTPUT);
     digitalWriteFast(CS_PIN, HIGH);
     //initialize SPI1
     SPI1.begin();
     //reset bno
-    reset();
+    //delay(1);
+    //reset();
     //wake bno
     if(wake() != error_t::GOOD) return error_t::ERROR;
     return error_t::GOOD;
@@ -69,48 +71,36 @@ void BNO085_SPI::reset(){
 error_t BNO085_SPI::wake(){
     if(m_state == IMUStates::Uninitialized) return error_t::ERROR;
     if(m_state != IMUStates::Asleep) return error_t::GOOD;
-    digitalWriteFast(P0_PIN, LOW);
+    //digitalWriteFast(P0_PIN, LOW);
     elapsedMicros timeout = 0;
     while(m_state != IMUStates::Startup && m_state != IMUStates::Operational && timeout < WAKE_TIMEOUT_us);
+    Serial.println(static_cast<uint_t>(timeout));
     if(m_state == IMUStates::Operational || m_state == IMUStates::Startup) return error_t::GOOD;
     return error_t::ERROR;
 }
 
 void BNO085_SPI::serviceInterrupt(){
-    if(m_state == IMUStates::Asleep){
-        m_state = IMUStates::Startup;
-        digitalWriteFast(P0_PIN, HIGH);
+    if(digitalReadFast(INTERRUPT_PIN) == LOW){
+        //falling edge (BNO pulls INTN low)
+        if(m_state == IMUStates::Asleep){
+            m_state = IMUStates::Startup;
+            //digitalWriteFast(P0_PIN, HIGH);
+        }
+        for(uint_t i=0; i<1; i++){
+            SPI1.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE3));
+            digitalWrite(CS_PIN, LOW);
+            SPI1.transfer(m_txBuffer.data(), m_rxBuffer.data(), m_rxBuffer.size());
+            digitalWrite(CS_PIN, HIGH);
+            SPI1.endTransaction();
+
+            for(uint_t i=0; i<m_rxBuffer.size(); i++){
+                Serial.printf("%d ", m_rxBuffer[i]);
+            }
+            Serial.println();
+
+            delayMicroseconds(100);
+        }
     }
-    error_t badPacket = error_t::GOOD;
-    uint_t count = 0; //debug
-    noInterrupts();
-    while(digitalReadFast(INTERRUPT_PIN) == LOW){
-        /*
-        if(badPacket != error_t::GOOD){
-            count++;
-            void flushChunck();
-        }
-        else{
-            result_t<SHTPHeader> packet = readSHTP();
-            if(packet.error != error_t::GOOD) badPacket = error_t::ERROR;
-            respondToPacket(packet.data);
-        }
-        */
-        //debug-----------------------------
-        SPI1.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE2));
-        digitalWriteFast(CS_PIN, LOW);
-        SPI1.transfer(nullptr, m_rxBuffer.data(), m_rxBuffer.size());
-        digitalWriteFast(CS_PIN, HIGH);
-        SPI1.endTransaction();
-        interrupts();
-        for(uint_t i=0; i<m_rxBuffer.size(); i++){
-            Serial.printf("%d ", m_rxBuffer[i]);
-        }
-        Serial.println();
-        noInterrupts();
-        //debug-----------------------------
-    }
-    interrupts();
 }
 
 result_t<BNO085_SPI::SHTPHeader> BNO085_SPI::readSHTP(){
