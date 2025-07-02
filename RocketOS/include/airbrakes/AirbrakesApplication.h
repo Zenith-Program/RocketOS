@@ -131,14 +131,15 @@ namespace Airbrakes{
                 };
             // =============================
             //list of subcommands
-            const std::array<CommandList, 7> c_rootChildren{
+            const std::array<CommandList, 8> c_rootChildren{
                 m_controller.getCommands(),
                 m_flightPlan.getCommands(),
                 m_log.getCommands(),
                 m_telemetry.getCommands(),
                 m_persistent.getCommands(),
                 CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()},
-                m_altimeter.getCommands()
+                m_altimeter.getCommands(),
+                m_IMU.getCommands()
             };
             //list of local commands
             const std::array<Command, 4> c_rootCommands{

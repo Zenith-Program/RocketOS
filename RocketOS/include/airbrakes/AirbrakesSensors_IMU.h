@@ -7,7 +7,29 @@
 namespace Airbrakes{
     namespace Sensors{
         enum class IMUStates{
-            Uninitialized, Asleep, Waking, Reseting, StartOrientationConfiguration, DoingOrientationConfiguration, StartAngularVelocityConfiguration, DoingAngularVelocityConfiguration, StartLinearAccelerationConfiguration, DoingLinearAccelerationConfiguration, Operational
+            Uninitialized, Reseting, 
+            StartOrientationConfiguration, DoingOrientationConfiguration, 
+            StartAngularVelocityConfiguration, DoingAngularVelocityConfiguration, 
+            StartLinearAccelerationConfiguration, DoingLinearAccelerationConfiguration, 
+            StartGravityConfiguration, DoingGravityConfiguration, 
+            Operational
+        };
+
+        enum class IMUData{
+            Orientation, Rotation, LinearAcceleration, Gravity
+        };
+
+        struct Vector3{
+            float_t x; 
+            float_t y; 
+            float_t z;
+        };
+
+        struct Quaternion{
+            float_t r;
+            float_t i;
+            float_t j;
+            float_t k;
         };
 
         class BNO085_SPI{
@@ -30,17 +52,25 @@ namespace Airbrakes{
             const char* const m_name;
             uint_t m_SPIFrequency;
             IMUStates m_state;
+            bool m_resetComplete, m_hubInitialized, m_waking;
             std::array<uint8_t, Airbrakes_CFG_IMUBufferSize> m_rxBuffer;
             std::array<uint8_t, Airbrakes_CFG_IMUBufferSize> m_txBuffer;
             std::array<uint_t, c_numSHTPChannels> m_sequenceNumbers;
+
+            Vector3 m_currentLinearAcceleration;
+            Vector3 m_currentAngularVelocity;
+            Vector3 m_currentGravity;
+            Quaternion m_currentOrientation;
+
+            uint_t m_samplePeriod_us;
 
         public:
             //interface
             BNO085_SPI(const char*, uint_t);
             error_t initialize();
             void sleep();
-            error_t wake();
             IMUStates state() const;
+            RocketOS::Shell::CommandList getCommands();
 
         private:
             //structures
@@ -62,17 +92,34 @@ namespace Airbrakes{
             //packet handling
             void respondToPacket(SHTPHeader);   
             bool handleInitializeResponse(SHTPHeader);
+            bool handleResetComplete(SHTPHeader);
+            bool handleGravityFeatureResponse(SHTPHeader);
             bool handleOrientationFeatureResponse(SHTPHeader);
             bool handleAngularVelocityFeatureResponse(SHTPHeader);
             bool handleLinearAccelerationFeatureResponse(SHTPHeader);
 
             //configuration
-            SHTPHeader generateOrientationFeatureCommand();
-            SHTPHeader generateAngularVelocityFeatureCommand();
-            SHTPHeader generateLinearAccelerationFeatureCommand();
-            SHTPHeader generateOrientationFeatureResponseCommand();
-            SHTPHeader generateAngularVelocityFeatureResponseCommand();
-            SHTPHeader generateLinearAccelerationFeatureResponseCommand();
+            SHTPHeader generateFeatureCommand(IMUData);
+            SHTPHeader generateFeatureResponseCommand(IMUData);
+            static uint8_t getReportID(IMUData);
+
+        private:
+            // ######### command structure #########
+            using Command = RocketOS::Shell::Command;
+            using CommandList = RocketOS::Shell::CommandList;
+            using arg_t = RocketOS::Shell::arg_t;
+
+            // === ROOT COMMAND LIST ===
+                //child command lists
+
+                //sub command list
+
+                //commands
+                const std::array<Command, 1> c_rootCommands{
+                    Command{"wake", "", [this](arg_t){
+                        wakeAsync();
+                    }}
+                };
         };
     }
 }
