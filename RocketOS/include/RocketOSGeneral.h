@@ -99,4 +99,23 @@ namespace RocketOS{
         inline result_t(error_t newError) : error(newError) {}
         inline result_t(T newData, error_t newError) : data(newData), error(newError) {}
     };
+
 }
+
+/*inplace function type
+*/
+
+#ifdef RocketOS_CFG_UsingTeensyTimerTool
+#include <TeensyTimerTool.h>
+namespace RocketOS{
+    template<class T_Signiature, std::size_t t_size>
+    using inplaceFunction_t = TeensyTimerTool::stdext::inplace_function<T_Signiature, t_size>;
+}
+#else
+#include <inplace_function.h>
+namespace RocketOS{
+    template<class T_Signiature, std::size_t t_size>
+    using inplaceFunction_t = teensy::inplace_function<T_Signiature, t_size>;
+}
+#endif
+

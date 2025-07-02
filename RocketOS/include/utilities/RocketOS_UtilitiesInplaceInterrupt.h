@@ -2,24 +2,11 @@
 #include "RocketOS_UtilitiesGeneral.h"
 #include <Arduino.h>
 
-#ifdef RocketOS_CFG_UsingTeensyTimerTool
-#include <TeensyTimerTool.h>
-namespace RocketOS{
-    namespace Utilities{
-        using interruptCallback_t = TeensyTimerTool::stdext::inplace_function<void(void), RocketOS_Utilities_InterruptCallbackCaptureSize>;
-    }
-}
-#else
-#include <inplace_function.h>
-namespace RocketOS{
-    namespace Utilities{
-        using interruptCallback_t = teensy::inplace_function<void(void), RocketOS_Utilities_InterruptCallbackCaptureSize>;
-    }
-}
-#endif
 
 namespace RocketOS{
     namespace Utilities{
+        using interruptCallback_t = inplaceFunction_t<void(void), RocketOS_Utilities_InterruptCallbackCaptureSize>;
+
         template<uint8_t t_pin>
         class inplaceInterrupt{
             static interruptCallback_t s_callback;
