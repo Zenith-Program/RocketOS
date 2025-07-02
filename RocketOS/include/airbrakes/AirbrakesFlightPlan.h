@@ -6,6 +6,17 @@ namespace Airbrakes{
     namespace Controls{
         class FlightPlan{
         private:
+            //error codes
+            static constexpr error_t ERROR_OutOfBounds = error_t(6);
+            static constexpr error_t ERROR_Logic = error_t(7);
+        public:
+            static constexpr error_t ERROR_Formating = error_t(2);
+            static constexpr error_t ERROR_Memory = error_t(3);
+            static constexpr error_t ERROR_File = error_t(4);
+            static constexpr error_t ERROR_NotLoaded = error_t(5);
+        
+        private:
+            //data
             const char* const m_name;
             SdFat& m_sd;
             FsFile m_file;
@@ -23,10 +34,10 @@ namespace Airbrakes{
             float_t m_dryMass;
             float_t m_groundLevelTemperature;
             float_t m_groundLevelPressure;
-
             FileName_t m_fileName;
             bool m_isLoaded;
         public:
+            //interface
             FlightPlan(const char*, SdFat&, float_t*, uint_t, const char*);
 
             RocketOS::Shell::CommandList getCommands();
@@ -46,7 +57,9 @@ namespace Airbrakes{
             result_t<float_t> getDryMass() const;
             result_t<float_t> getGroundTemperature() const;
             result_t<float_t> getGroundPressure() const;
+            
         private:
+            //helpers
             result_t<float_t> pointSlopeInterpolate(result_t<float_t>, result_t<float_t>, result_t<float_t>, float_t, float_t) const;
             error_t setValueInMesh(float_t, uint_t, uint_t);
             result_t<float_t> getValueInMesh(uint_t, uint_t) const;

@@ -10,19 +10,59 @@ using namespace Sensors;
 #define RESET_PIN 33
 #define INTERRUPT_PIN 25
 #define CS_PIN 38
+#define MISO_PIN 39
 
 //timings
-#define RESET_SIGNAL_DURRATION_us 100
+#define RESET_SIGNAL_DURRATION_ns 100
 #define WAKE_TIMEOUT_us 200000
+#define RESET_TIMEOUT_us 200000
 
 //protocol
 #define SHTP_CONTINUATION_BIT 0x80
-#define SHTP_IGNORE_CHUNCK_SIZE 256
-#define SHTP_HEADER_SIZE 4
+#define SHTP_HEADER_SIZE 4u
 #define SHTP_LENGTH_MSB 1
-#define SHTP_LENGTH_LSB 1
+#define SHTP_LENGTH_LSB 0
 #define SHTP_CHANNEL 2
 #define SHTP_SEQUENCE 3
+
+//channels
+#define SHTP_COMMAND_CHANNEL 0
+#define SHTP_EXECUTABLE_CHANNEL 1
+#define SHTP_HUB_CHANNEL 2
+#define SHTP_INPUT_SENSOR_CHANNEL 3
+#define SHTP_WAKE_INPUT_SENSOR_CHANNEL 4
+#define SHTP_GYRO_CHANNEL 5
+
+//initialization command (rx)
+#define SHTP_INITIALIZATION_LENGTH 16
+#define SHTP_INITIALIZATION_ID 0xF1
+#define SHTP_INITIALIZATION_COMMAND 0x04
+#define SHTP_INITIALIZATION_COMMAND_UNSOLICITED 0x84
+
+#define SHTP_INITIALIZATION_ID_BYTE 0
+#define SHTP_INITIALIZATION_COMMAND_BYTE 2
+#define SHTP_INITIALIZATION_STATUS_BYTE 5
+#define SHTP_INITIALIZATION_SUBSYSTEM_BYTE 6
+
+//set feature command (tx)
+#define SHTP_SET_FEATURE_LENGTH 16
+#define SHTP_SET_FEATURE_ID 0xFD
+
+#define SHTP_SET_FEATURE_ORIENTATION_ID
+#define SHTP_SET_FEATURE_ANGULAR_ID 
+#define SHTP_SET_FEATURE_LINEAR_ID 
+
+#define SHTP_SET_FEATURE_ID_BYTE 0
+#define SHTP_SET_FEATURE_SENSOR_ID_BYTE 1
+#define SHTP_SET_FEATURE_FLAGS_BYTE 2
+#define SHTP_SET_FEATURE_SENSITIVITY_LSB_BYTE 3
+#define SHTP_SET_FEATURE_SENSITIVITY_MSB_BYTE 4
+#define SHTP_SET_FEATURE_REPORT_INTERVAL_LSB_BYTE 5
+#define SHTP_SET_FEATURE_BATCH_INTERVAL_LSB_BYTE 9
+
+#define SHTP_SET_FEATURE_REPORT_INTERVAL_SIZE 4
+#define SHTP_SET_FEATURE_BATCH_INTERVAL_SIZE 4
+
 
 
 BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized){
@@ -32,6 +72,8 @@ BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency) : m_name(name), m_SPI
 }
 
 error_t BNO085_SPI::initialize(){
+    //shutdown any previously initialized syatems
+    SPI1.end();
     //initialize wake pin
     pinMode(P0_PIN, OUTPUT);
     digitalWriteFast(P0_PIN, HIGH);
@@ -40,18 +82,27 @@ error_t BNO085_SPI::initialize(){
     digitalWriteFast(RESET_PIN, HIGH);
     //initialize interrupt pin
     pinMode(INTERRUPT_PIN, INPUT_PULLUP);
-    RocketOS::Utilities::inplaceInterrupt<INTERRUPT_PIN>::configureInterrupt([this](){this->serviceInterrupt();}, CHANGE);
+    RocketOS::Utilities::inplaceInterrupt<INTERRUPT_PIN>::configureInterrupt([this](){this->serviceInterrupt();}, FALLING);
     //initialize select pin
     pinMode(CS_PIN, OUTPUT);
     digitalWriteFast(CS_PIN, HIGH);
     //initialize SPI1
+    SPI1.setMISO(MISO_PIN);
     SPI1.begin();
-    //reset bno
-    //delay(1);
-    //reset();
-    //wake bno
-    if(wake() != error_t::GOOD) return error_t::ERROR;
-    return error_t::GOOD;
+    //reset bno085
+    resetAsync();
+    elapsedMicros timeout = 0;
+    while(m_state != IMUStates::Operational && timeout < RESET_TIMEOUT_us);
+    switch(m_state){
+        case IMUStates::Operational: return error_t::GOOD;
+        case IMUStates::StartOrientationConfiguration:
+        case IMUStates::DoingOrientationConfiguration:
+        case IMUStates::StartAngularVelocityConfiguration:
+        case IMUStates::DoingAngularVelocityConfiguration:
+        case IMUStates::StartLinearAccelerationConfiguration:
+        case IMUStates::DoingLinearAccelerationConfiguration: return ERROR_ConfigurationTimeout;
+        default: return ERROR_ResetTimeout;
+    }
 }
 
 IMUStates BNO085_SPI::state() const{
@@ -60,45 +111,56 @@ IMUStates BNO085_SPI::state() const{
 
 
 //helper functions
-void BNO085_SPI::reset(){
-    digitalWriteFast(P0_PIN, HIGH);
+
+void BNO085_SPI::resetAsync(){
+    m_state = IMUStates::Reseting;
+    //assert reset pin
     digitalWriteFast(RESET_PIN, LOW);
-    delayMicroseconds(RESET_SIGNAL_DURRATION_us);
+    delayNanoseconds(RESET_SIGNAL_DURRATION_ns);
     digitalWriteFast(RESET_PIN, HIGH);
-    m_state = IMUStates::Asleep;
 }
 
-error_t BNO085_SPI::wake(){
-    if(m_state == IMUStates::Uninitialized) return error_t::ERROR;
-    if(m_state != IMUStates::Asleep) return error_t::GOOD;
-    //digitalWriteFast(P0_PIN, LOW);
-    elapsedMicros timeout = 0;
-    while(m_state != IMUStates::Startup && m_state != IMUStates::Operational && timeout < WAKE_TIMEOUT_us);
-    Serial.println(static_cast<uint_t>(timeout));
-    if(m_state == IMUStates::Operational || m_state == IMUStates::Startup) return error_t::GOOD;
-    return error_t::ERROR;
+void BNO085_SPI::wakeAsync(){
+    m_state = IMUStates::Waking;
+    //assert wake pin
+    digitalWriteFast(P0_PIN, LOW);
 }
 
 void BNO085_SPI::serviceInterrupt(){
     if(digitalReadFast(INTERRUPT_PIN) == LOW){
-        //falling edge (BNO pulls INTN low)
-        if(m_state == IMUStates::Asleep){
-            m_state = IMUStates::Startup;
-            //digitalWriteFast(P0_PIN, HIGH);
+        //handle reconfiguration after wakeup
+        if(m_state == IMUStates::Waking){
+            m_state = IMUStates::StartOrientationConfiguration;
+            //de-assert wake pin
+            digitalWriteFast(P0_PIN, HIGH);
         }
-        for(uint_t i=0; i<1; i++){
-            SPI1.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE3));
-            digitalWrite(CS_PIN, LOW);
-            SPI1.transfer(m_txBuffer.data(), m_rxBuffer.data(), m_rxBuffer.size());
-            digitalWrite(CS_PIN, HIGH);
-            SPI1.endTransaction();
-
-            for(uint_t i=0; i<m_rxBuffer.size(); i++){
-                Serial.printf("%d ", m_rxBuffer[i]);
-            }
-            Serial.println();
-
-            delayMicroseconds(100);
+        //handle incoming packets
+        result_t<BNO085_SPI::SHTPHeader> result = readSHTP();
+        while(result.error == error_t::GOOD){
+            respondToPacket(result.data);
+            result = readSHTP();
+        }
+        //configure sensors
+        if(m_state == IMUStates::StartOrientationConfiguration){
+            SHTPHeader header = generateOrientationFeatureCommand();
+            sendSHTP(header);
+            header = generateOrientationFeatureResponseCommand();
+            sendSHTP(header);
+            m_state = IMUStates::DoingOrientationConfiguration;
+        }
+        if(m_state == IMUStates::StartAngularVelocityConfiguration){
+            SHTPHeader header = generateAngularVelocityFeatureCommand();
+            sendSHTP(header);
+            header = generateAngularVelocityFeatureResponseCommand();
+            sendSHTP(header);
+            m_state = IMUStates::DoingAngularVelocityConfiguration;
+        }
+        if(m_state == IMUStates::StartLinearAccelerationConfiguration){
+            SHTPHeader header = generateLinearAccelerationFeatureCommand();
+            sendSHTP(header);
+            header = generateLinearAccelerationFeatureResponseCommand();
+            sendSHTP(header);
+            m_state = IMUStates::DoingLinearAccelerationConfiguration;
         }
     }
 }
@@ -119,29 +181,25 @@ result_t<BNO085_SPI::SHTPHeader> BNO085_SPI::readSHTP(){
     header.length = static_cast<uint16_t>(headerBytes[SHTP_LENGTH_LSB]) | (static_cast<uint16_t>((headerBytes[SHTP_LENGTH_MSB] & ~SHTP_CONTINUATION_BIT)) << 8);
     header.channel = headerBytes[SHTP_CHANNEL];
     //check for invalid headers
-    if(header.length <= SHTP_HEADER_SIZE) return errorOut(header, error_t(2));
-    if(header.channel > c_numSHTPChannels) return errorOut(header, error_t(3));
-    if(header.length-SHTP_HEADER_SIZE >= m_rxBuffer.size() && !header.continuation) return errorOut(header, error_t(4));
-    //read payload
-    if(!header.continuation){
-        //store payload in rx buffer for simple packets
-        SPI1.transfer(nullptr, m_rxBuffer.data(), header.length-SHTP_HEADER_SIZE);
+    if(header.length <= SHTP_HEADER_SIZE) return errorOut(header, ERROR_HeaderLength);
+    if(header.channel > c_numSHTPChannels) return errorOut(header, ERROR_HeaderChannel);
+
+    if(header.length-SHTP_HEADER_SIZE >= m_rxBuffer.size() && !header.continuation){
+        SPI.transfer(nullptr, header.length-SHTP_HEADER_SIZE);
+        return errorOut(header, ERROR_RxBufferOverflow);
     }
-    else{
+    if(header.continuation){
         //discard payload for continuation packets (not needed for application)
         SPI1.transfer(nullptr, header.length-SHTP_HEADER_SIZE);
+        return errorOut(header, ERROR_ContinuationPacket);
+        
     }
+    //store payload in rx buffer for simple packets
+    SPI1.transfer(nullptr, m_rxBuffer.data(), header.length-SHTP_HEADER_SIZE);
+    //end SPI transaction
     digitalWriteFast(CS_PIN, HIGH);
     SPI1.endTransaction();
     return header;
-}
-
-void BNO085_SPI::flushChunck(){
-    SPI1.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE3));
-    digitalWriteFast(CS_PIN, LOW);
-    SPI1.transfer(nullptr, SHTP_IGNORE_CHUNCK_SIZE);
-    digitalWriteFast(CS_PIN, HIGH);
-    SPI1.endTransaction();
 }
 
 error_t BNO085_SPI::sendSHTP(BNO085_SPI::SHTPHeader packet){
@@ -165,6 +223,48 @@ error_t BNO085_SPI::sendSHTP(BNO085_SPI::SHTPHeader packet){
 }
 
 void BNO085_SPI::respondToPacket(BNO085_SPI::SHTPHeader packet){
-    //for now
+    //debug==================
+    /*
     Serial.printf("Packet - length: %d, channel: %d, continuation: %d\n", packet.length, packet.channel, (packet.continuation)? 1 : 0);
+    for(uint_t i=0; i<packet.length - SHTP_HEADER_SIZE; i++)
+        Serial.printf("%d ", m_rxBuffer[i]);
+    Serial.println();
+    */
+    //========================
+    if(handleInitializeResponse(packet)) return;
+    if(handleOrientationFeatureResponse(packet)) return;
+    if(handleAngularVelocityFeatureResponse(packet)) return;
+    if(handleLinearAccelerationFeatureResponse(packet)) return;
+}
+
+bool BNO085_SPI::handleInitializeResponse(SHTPHeader packet){
+    if(packet.continuation || packet.channel != SHTP_HUB_CHANNEL) return;
+    if(packet.length != SHTP_INITIALIZATION_LENGTH + SHTP_HEADER_SIZE) return;
+    if(m_rxBuffer[SHTP_INITIALIZATION_ID_BYTE] != SHTP_INITIALIZATION_ID) return;
+    if(m_rxBuffer[SHTP_INITIALIZATION_COMMAND_BYTE] != SHTP_INITIALIZATION_COMMAND && m_rxBuffer[SHTP_INITIALIZATION_COMMAND_BYTE] != SHTP_INITIALIZATION_COMMAND_UNSOLICITED) return;
+    if(m_rxBuffer[SHTP_INITIALIZATION_STATUS_BYTE] == 0 && m_rxBuffer[SHTP_INITIALIZATION_SUBSYSTEM_BYTE] == 1){
+        //recived an initialization packet
+        m_state = IMUStates::StartOrientationConfiguration;
+        return true;
+    }
+    return false;
+}
+
+BNO085_SPI::SHTPHeader BNO085_SPI::generateOrientationFeatureCommand(){
+
+}
+BNO085_SPI::SHTPHeader BNO085_SPI::generateAngularVelocityFeatureCommand(){
+
+}
+BNO085_SPI::SHTPHeader BNO085_SPI::generateLinearAccelerationFeatureCommand(){
+
+}
+BNO085_SPI::SHTPHeader BNO085_SPI::generateOrientationFeatureResponseCommand(){
+
+}
+BNO085_SPI::SHTPHeader BNO085_SPI::generateAngularVelocityFeatureResponseCommand(){
+
+}
+BNO085_SPI::SHTPHeader BNO085_SPI::generateLinearAccelerationFeatureResponseCommand(){
+
 }

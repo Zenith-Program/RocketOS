@@ -4,9 +4,6 @@ using namespace RocketOS;
 
 //implementation for error_t
 
-
-error_t::error_t(uint_t c) : m_code(c){}
-
 error_t::operator bool() const{
     return m_code !=0;
 }

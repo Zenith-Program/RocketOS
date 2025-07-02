@@ -81,50 +81,53 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
 
 
 void Application::initialize(){
-    error_t error = error_t::GOOD;
+    error_t anyError = error_t::GOOD;
+    error_t processError;
     m_inputBuffer.init();
     Serial.println("Initializing airbrakes application...");
     //resore EEPROM data
     result_t<bool> result = m_persistent.restore();
     if(result.error != error_t::GOOD){ 
         Serial.println("Error interfacing with EEPROM");
-        error = result.error;
+        anyError = result.error;
     }
     if(result.data) Serial.println("Restored system defaults because of detected EEPROM layout change");
     else Serial.println("Loaded persistent EEPROM data");
     //initialize SD card
     if(!m_sdCard.begin(SdioConfig(FIFO_SDIO))){
          Serial.println("Error initializing the SD card");
-         error = error_t::ERROR;
+         anyError = error_t::ERROR;
     }
     else Serial.println("Initialized the SD card");
     //load flight plan
-    error_t loadError = m_flightPlan.loadFromFile();
-    if(loadError == error_t::GOOD) Serial.printf("Loaded flight plan from '%s'\n", m_flightPlan.getFileName());
+    processError = m_flightPlan.loadFromFile();
+    if(processError == error_t::GOOD) Serial.printf("Loaded flight plan from '%s'\n", m_flightPlan.getFileName());
     else{
-        if(loadError == error_t(2)) Serial.printf("Formatting error encountered when loading flight plan from '%s'\n", m_flightPlan.getFileName());
-        else if(loadError == error_t(3)) Serial.printf("Failed to load flight plan from '%s' due to lack of allocated memory\n", m_flightPlan.getFileName());
-        else if(loadError == error_t(4)) Serial.printf("Failed to open flight plan with file name '%s'\n", m_flightPlan.getFileName());
+        if(processError == Controls::FlightPlan::ERROR_Formating) Serial.printf("Formatting error encountered when loading flight plan from '%s'\n", m_flightPlan.getFileName());
+        else if(processError == Controls::FlightPlan::ERROR_Memory) Serial.printf("Failed to load flight plan from '%s' due to lack of allocated memory\n", m_flightPlan.getFileName());
+        else if(processError == Controls::FlightPlan::ERROR_File) Serial.printf("Failed to open flight plan with file name '%s'\n", m_flightPlan.getFileName());
         else Serial.println("Failed to load the flight plan");
-        error = error_t::ERROR;
+        anyError = error_t::ERROR;
     }
     //init altimeter
     if(m_altimeter.initialize() != error_t::GOOD){
         Serial.println("Failed to initialize the altimeter");
-        error = error_t::ERROR;
+        anyError = error_t::ERROR;
     }
     else Serial.println("Initialized the altimeter");
     //init IMU
-    if(m_IMU.initialize() != error_t::GOOD){
-        Serial.println("Failed to initialize the IMU");
-        error = error_t::ERROR;
+    processError = m_IMU.initialize();
+    if(processError != error_t::GOOD){
+        if(processError == Sensors::BNO085_SPI::ERROR_ResetTimeout) Serial.println("Failed to detect the IMU");
+        if(processError == Sensors::BNO085_SPI::ERROR_ConfigurationTimeout) Serial.println("Failed to configure the IMU");
+        anyError = error_t::ERROR;
     }
     else Serial.println("Initialized the IMU");
     //start timers
     m_controller.resetInit();
     Serial.println("Initialized the controller");
     //final message
-    if(error == error_t::GOOD) Serial.println("Successfully initialized all systems");
+    if(anyError == error_t::GOOD) Serial.println("Successfully initialized all systems");
     else Serial.println("Initialization complete, some systems failed to initialize");
 }
 
