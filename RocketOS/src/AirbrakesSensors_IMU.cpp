@@ -14,8 +14,10 @@ using namespace Sensors;
 
 //timings 
 #define RESET_SIGNAL_DURRATION_ns 100
-#define RESET_TIMEOUT_us 2000000
 #define WAKEUP_TIMER_PERIOD_us 1000
+#define RESET_TIMEOUT_BASE_us 300000 
+#define RESET_TIMEOUT_GAIN 3
+
 
 //protocol 
 #define NULL_PACKET SHTPHeader{0xFFFF, 0xFF, true}
@@ -36,8 +38,8 @@ using namespace Sensors;
 #define SHTP_GYRO_CHANNEL 5
 
 //sensor ID's
-#define SHTP_ORIENTATION_ID 0x02
-#define SHTP_ROTATION_ID 0x05
+#define SHTP_ORIENTATION_ID 0x05
+#define SHTP_ANGULAR_VELOCITY_ID 0x02
 #define SHTP_LINEAR_ID 0x04
 #define SHTP_GRAVITY_ID 0x06
 
@@ -97,8 +99,44 @@ using namespace Sensors;
 //page 65 of SH-2 Reference Manual
 #define SHTP_FEATURE_RESPONSE_PAYLOAD_LENGTH 17 
 #define SHTP_FEATURE_RESPONSE_ID 0xFC
+/*same structure as set feature command*/
 
-//same structure as set feature command
+// === vector report ===
+#define SHTP_VECTOR_REPORT_LENGTH 10
+#define SHTP_VECTOR_REPORT_ID_BYTE 0
+#define SHTP_VECTOR_REPORT_SEQUENCE_BYTE 1 //ignored
+#define SHTP_VECTOR_REPORT_STATUS_BYTE 2
+#define SHTP_VECTOR_REPORT_DELAY_BYTE 3 //ignored (this may be usefull for other applications)
+#define SHTP_VECTOR_REPORT_X_LSB_BYTE 4
+#define SHTP_VECTOR_REPORT_X_MSB_BYTE 5
+#define SHTP_VECTOR_REPORT_Y_LSB_BYTE 6
+#define SHTP_VECTOR_REPORT_Y_MSB_BYTE 7
+#define SHTP_VECTOR_REPORT_Z_LSB_BYTE 8
+#define SHTP_VECTOR_REPORT_Z_MSB_BYTE 9
+
+#define SHTP_LINEAR_ACCELERATION_Q_POINT 8 //location of the binary decimal point
+#define SHTP_ANGULAR_VELOCITY_Q_POINT 9 //location of the binary decimal point
+#define SHTP_GRAVITY_Q_POINT 8 //location of the binary decimal point
+
+// === orientation report ===
+#define SHTP_ORIENTATION_REPORT_LENGTH 14
+#define SHTP_ORIENTATION_REPORT_ID_BYTE 0
+#define SHTP_ORIENTATION_REPORT_SEQUENCE_BYTE 1
+#define SHTP_ORIENTATION_REPORT_STATUS_BYTE 2
+#define SHTP_ORIENTATION_REPORT_DELAY_BYTE 3
+#define SHTP_ORIENTATION_REPORT_I_LSB_BYTE 4
+#define SHTP_ORIENTATION_REPORT_I_MSB_BYTE 5
+#define SHTP_ORIENTATION_REPORT_J_LSB_BYTE 6
+#define SHTP_ORIENTATION_REPORT_J_MSB_BYTE 7
+#define SHTP_ORIENTATION_REPORT_K_LSB_BYTE 8
+#define SHTP_ORIENTATION_REPORT_K_MSB_BYTE 9
+#define SHTP_ORIENTATION_REPORT_REAL_LSB_BYTE 10
+#define SHTP_ORIENTATION_REPORT_REAL_MSB_BYTE 11
+#define SHTP_ORIENTATION_REPORT_ACCURACY_LSB_BYTE 12
+#define SHTP_ORIENTATION_REPORT_ACCURACY_MSB_BYTE 12
+
+#define SHTP_ORIENTATION_Q_POINT 14 //location of the binary decimal point
+
 
 
 
@@ -140,7 +178,8 @@ error_t BNO085_SPI::initialize(){
     //reset bno085
     resetAsync();
     elapsedMicros timeout = 0;
-    while(m_state != IMUStates::Operational && timeout < RESET_TIMEOUT_us);
+    uint_t timeoutDurration_us = RESET_TIMEOUT_BASE_us + RESET_TIMEOUT_GAIN * getMaxSamplePeriod();
+    while(m_state != IMUStates::Operational && timeout < timeoutDurration_us);
     switch(m_state){
         case IMUStates::Operational: return error_t::GOOD;
         case IMUStates::Configuring: return ERROR_ConfigurationTimeout;
@@ -193,11 +232,11 @@ void BNO085_SPI::serviceInterrupt(){
             m_state = IMUStates::Configuring;
             m_txQueue.push(makeFeatureCallback(IMUData::Orientation));
             m_txQueue.push(makeFeatureCallback(IMUData::LinearAcceleration));
-            m_txQueue.push(makeFeatureCallback(IMUData::Rotation));
+            m_txQueue.push(makeFeatureCallback(IMUData::AngularVelocity));
             m_txQueue.push(makeFeatureCallback(IMUData::Gravity));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::Orientation));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::LinearAcceleration));
-            m_txQueue.push(makeFeatureResponseCallback(IMUData::Rotation));
+            m_txQueue.push(makeFeatureResponseCallback(IMUData::AngularVelocity));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::Gravity));
             //set wakeup
             m_timer.end();
@@ -270,7 +309,7 @@ void BNO085_SPI::respondToPacket(BNO085_SPI::SHTPHeader packet){
     if(handleInitializeResponse(packet)) return;
     if(handleResetComplete(packet)) return;
     if(handleFeatureResponse(IMUData::LinearAcceleration, packet)) return;
-    if(handleFeatureResponse(IMUData::Rotation, packet)) return;
+    if(handleFeatureResponse(IMUData::AngularVelocity, packet)) return;
     if(handleFeatureResponse(IMUData::Orientation, packet)) return;
     if(handleFeatureResponse(IMUData::Gravity, packet)) return;
 }
@@ -313,6 +352,18 @@ bool BNO085_SPI::handleFeatureResponse(IMUData dataType, SHTPHeader packet){
         if(getStatus(dataType) == IMUSensorStatus::Disabled) getStatus(dataType) = IMUSensorStatus::Unreliable;
         return true;
     }
+    return false;
+}
+
+bool BNO085_SPI::handleVectorReport(IMUData dataType, SHTPHeader packet){
+    if(packet.length != SHTP_VECTOR_REPORT_LENGTH + SHTP_HEADER_SIZE) return false;
+    if(packet.channel != SHTP_INPUT_SENSOR_CHANNEL) return false;
+    if(packet.continuation) return false;
+    if(m_rxBuffer[SHTP_VECTOR_REPORT_ID_BYTE] != getReportID(dataType)) return false;
+
+}
+
+bool BNO085_SPI::handleOrientationReport(SHTPHeader packet){
     return false;
 }
 
@@ -380,7 +431,7 @@ BNO085_SPI::txCallback_t BNO085_SPI::makeFeatureResponseCallback(IMUData dataTyp
 uint8_t BNO085_SPI::getReportID(IMUData data){
     switch(data){
         case IMUData::Orientation: return SHTP_ORIENTATION_ID;
-        case IMUData::Rotation: return SHTP_ROTATION_ID;
+        case IMUData::AngularVelocity: return SHTP_ANGULAR_VELOCITY_ID;
         case IMUData::LinearAcceleration: return SHTP_LINEAR_ID;
         case IMUData::Gravity: return SHTP_GRAVITY_ID;
         default: return 0x00;
@@ -390,7 +441,7 @@ uint8_t BNO085_SPI::getReportID(IMUData data){
 uint_t& BNO085_SPI::getSamplePeriod(IMUData data){
     switch(data){
         case IMUData::Orientation: return m_orientationSamplePeriod_us;
-        case IMUData::Rotation: return m_angularVelocitySamplePeriod_us;
+        case IMUData::AngularVelocity: return m_angularVelocitySamplePeriod_us;
         case IMUData::LinearAcceleration: return m_LinearAccelerationSamplePeriod_us;
         case IMUData::Gravity: 
         default: return m_gravitySamplePeriod_us;
@@ -400,12 +451,27 @@ uint_t& BNO085_SPI::getSamplePeriod(IMUData data){
 IMUSensorStatus& BNO085_SPI::getStatus(IMUData data){
     switch(data){
         case IMUData::Orientation: return m_orientationStatus;
-        case IMUData::Rotation: return m_angularVelocityStatus;
+        case IMUData::AngularVelocity: return m_angularVelocityStatus;
         case IMUData::LinearAcceleration: return m_LinearAccelerationStatus;
         case IMUData::Gravity: 
         default: return m_gravityStatus;
     }
 }
+
+uint_t BNO085_SPI::getQPoint(IMUData data){
+    switch(data){
+        case IMUData::Orientation: return SHTP_ORIENTATION_Q_POINT;
+        case IMUData::AngularVelocity: return SHTP_ANGULAR_VELOCITY_Q_POINT;
+        case IMUData::LinearAcceleration: return SHTP_LINEAR_ACCELERATION_Q_POINT;
+        case IMUData::Gravity: 
+        default: return SHTP_GRAVITY_Q_POINT;
+    }
+}
+
+uint_t BNO085_SPI::getMaxSamplePeriod() const{
+    return max(m_LinearAccelerationSamplePeriod_us, max(m_orientationSamplePeriod_us, max(m_gravitySamplePeriod_us, m_angularVelocitySamplePeriod_us)));
+}
+
 
 //debugging
 void BNO085_SPI::debugPrintRx(SHTPHeader packet, bool printBuffer){

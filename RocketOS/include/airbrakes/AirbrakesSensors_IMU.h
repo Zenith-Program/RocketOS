@@ -34,7 +34,7 @@ namespace Airbrakes{
             //structures
 
             enum class IMUData{
-                Orientation, Rotation, LinearAcceleration, Gravity
+                Orientation, AngularVelocity, LinearAcceleration, Gravity
             };
 
             struct SHTPHeader{
@@ -103,6 +103,8 @@ namespace Airbrakes{
             bool handleInitializeResponse(SHTPHeader);
             bool handleResetComplete(SHTPHeader);
             bool handleFeatureResponse(IMUData, SHTPHeader);
+            bool handleVectorReport(IMUData, SHTPHeader);
+            bool handleOrientationReport(SHTPHeader);
 
             //configuration
             SHTPHeader generateFeatureCommand(IMUData);
@@ -113,6 +115,9 @@ namespace Airbrakes{
             static uint8_t getReportID(IMUData);
             uint_t& getSamplePeriod(IMUData);
             IMUSensorStatus& getStatus(IMUData);
+            static uint_t getQPoint(IMUData);
+
+            uint_t getMaxSamplePeriod() const;
 
         private:
             // ######### command structure #########
