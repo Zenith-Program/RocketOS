@@ -105,7 +105,7 @@ using namespace Sensors;
 #define SHTP_VECTOR_REPORT_LENGTH 10
 #define SHTP_VECTOR_REPORT_ID_BYTE 0
 #define SHTP_VECTOR_REPORT_SEQUENCE_BYTE 1 //ignored
-#define SHTP_VECTOR_REPORT_STATUS_BYTE 2
+#define SHTP_VECTOR_REPORT_STATUS_BYTE 2 //low bits give sensor accuracy (used), upper bits used for delay (not used)
 #define SHTP_VECTOR_REPORT_DELAY_BYTE 3 //ignored (this may be usefull for other applications)
 #define SHTP_VECTOR_REPORT_X_LSB_BYTE 4
 #define SHTP_VECTOR_REPORT_X_MSB_BYTE 5
@@ -117,6 +117,8 @@ using namespace Sensors;
 #define SHTP_LINEAR_ACCELERATION_Q_POINT 8 //location of the binary decimal point
 #define SHTP_ANGULAR_VELOCITY_Q_POINT 9 //location of the binary decimal point
 #define SHTP_GRAVITY_Q_POINT 8 //location of the binary decimal point
+
+#define SHTP_VECTOR_REPORT_ACCURACY_BITS 0x03
 
 // === orientation report ===
 #define SHTP_ORIENTATION_REPORT_LENGTH 14
@@ -136,6 +138,8 @@ using namespace Sensors;
 #define SHTP_ORIENTATION_REPORT_ACCURACY_MSB_BYTE 12
 
 #define SHTP_ORIENTATION_Q_POINT 14 //location of the binary decimal point
+
+#define SHTP_ORIENTATION_REPORT_ACCURACY_BITS 0x03
 
 
 
@@ -312,6 +316,10 @@ void BNO085_SPI::respondToPacket(BNO085_SPI::SHTPHeader packet){
     if(handleFeatureResponse(IMUData::AngularVelocity, packet)) return;
     if(handleFeatureResponse(IMUData::Orientation, packet)) return;
     if(handleFeatureResponse(IMUData::Gravity, packet)) return;
+    if(handleVectorReport(IMUData::LinearAcceleration, packet)) return;
+    if(handleVectorReport(IMUData::AngularVelocity, packet)) return;
+    if(handleVectorReport(IMUData::Gravity, packet)) return;
+    if(handleOrientationReport(packet)) return;
 }
 
 //command responses--------------------------------------------
@@ -347,7 +355,7 @@ bool BNO085_SPI::handleFeatureResponse(IMUData dataType, SHTPHeader packet){
         uint32_t actualPeriod_us = static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE]) | 
         static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 8) |
         static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 16) |
-        static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 32);
+        static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 24);
         getSamplePeriod(dataType) = actualPeriod_us;
         if(getStatus(dataType) == IMUSensorStatus::Disabled) getStatus(dataType) = IMUSensorStatus::Unreliable;
         return true;
@@ -360,11 +368,53 @@ bool BNO085_SPI::handleVectorReport(IMUData dataType, SHTPHeader packet){
     if(packet.channel != SHTP_INPUT_SENSOR_CHANNEL) return false;
     if(packet.continuation) return false;
     if(m_rxBuffer[SHTP_VECTOR_REPORT_ID_BYTE] != getReportID(dataType)) return false;
-
+    //read status value
+    IMUSensorStatus status = IMUSensorStatus::Unreliable;
+    uint8_t statusBits = m_rxBuffer[SHTP_VECTOR_REPORT_STATUS_BYTE] & SHTP_VECTOR_REPORT_ACCURACY_BITS;
+    if(statusBits == 1) status = IMUSensorStatus::LowAccuracy;
+    if(statusBits == 2) status = IMUSensorStatus::ModerateAccuracy;
+    if(statusBits == 3) status = IMUSensorStatus::HighAccuracy;
+    getStatus(dataType) = status;
+    //read vector value
+    uint16_t xValue = static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_X_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_X_MSB_BYTE]) << 8);
+    uint16_t yValue = static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Y_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Y_MSB_BYTE]) << 8);
+    uint16_t zValue = static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Z_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Z_MSB_BYTE]) << 8);
+    float_t xFloat = static_cast<float_t>(xValue) / pow2(getQPoint(dataType));
+    float_t yFloat = static_cast<float_t>(yValue) / pow2(getQPoint(dataType));
+    float_t zFloat = static_cast<float_t>(zValue) / pow2(getQPoint(dataType));
+    Vector3& storageValue = getVector(dataType);
+    storageValue.x = xFloat;
+    storageValue.y = yFloat;
+    storageValue.z = zFloat;
+    return true;
 }
 
 bool BNO085_SPI::handleOrientationReport(SHTPHeader packet){
-    return false;
+    if(packet.length != SHTP_ORIENTATION_REPORT_LENGTH + SHTP_HEADER_SIZE) return false;
+    if(packet.channel != SHTP_INPUT_SENSOR_CHANNEL) return false;
+    if(packet.continuation) return false;
+    if(m_rxBuffer[SHTP_ORIENTATION_REPORT_ID_BYTE] != getReportID(IMUData::Orientation)) return false;
+    //read status value
+    IMUSensorStatus status = IMUSensorStatus::Unreliable;
+    uint8_t statusBits = m_rxBuffer[SHTP_ORIENTATION_REPORT_STATUS_BYTE] & SHTP_ORIENTATION_REPORT_ACCURACY_BITS;
+    if(statusBits == 1) status = IMUSensorStatus::LowAccuracy;
+    if(statusBits == 2) status = IMUSensorStatus::ModerateAccuracy;
+    if(statusBits == 3) status = IMUSensorStatus::HighAccuracy;
+    m_orientationStatus = status;
+    //read quaternion value
+    uint16_t rValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_REAL_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_REAL_MSB_BYTE]) << 8);
+    uint16_t iValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_I_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_I_MSB_BYTE]) << 8);
+    uint16_t jValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_J_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_J_MSB_BYTE]) << 8);
+    uint16_t kValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_K_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_K_MSB_BYTE]) << 8);
+    float_t rFloat = static_cast<float_t>(rValue) / pow2(getQPoint(IMUData::Orientation));
+    float_t iFloat = static_cast<float_t>(iValue) / pow2(getQPoint(IMUData::Orientation));
+    float_t jFloat = static_cast<float_t>(jValue) / pow2(getQPoint(IMUData::Orientation));
+    float_t kFloat = static_cast<float_t>(kValue) / pow2(getQPoint(IMUData::Orientation));
+    m_currentOrientation.r = rFloat;
+    m_currentOrientation.i = iFloat;
+    m_currentOrientation.j = jFloat;
+    m_currentOrientation.k = kFloat;
+    return true;
 }
 
 //command generation-------------------------------------------
@@ -468,10 +518,42 @@ uint_t BNO085_SPI::getQPoint(IMUData data){
     }
 }
 
+Vector3& BNO085_SPI::getVector(IMUData data){
+    switch(data){
+        case IMUData::AngularVelocity: return m_currentAngularVelocity;
+        case IMUData::LinearAcceleration: return m_currentLinearAcceleration;
+        case IMUData::Gravity:
+        default: return m_currentGravity;
+    }
+}
+
 uint_t BNO085_SPI::getMaxSamplePeriod() const{
     return max(m_LinearAccelerationSamplePeriod_us, max(m_orientationSamplePeriod_us, max(m_gravitySamplePeriod_us, m_angularVelocitySamplePeriod_us)));
 }
 
+float_t BNO085_SPI::pow2(uint_t n){
+    float_t value = 1;
+    for(uint_t i=0; i<n; i++)
+        value/=2;
+    return value;
+}
+
+//output struct print functionality
+void Vector3::print() const{
+    Serial.printf("<%.2f, %.2f, %.2f>", x, y, z);
+}
+
+void Vector3::println() const{
+    Serial.printf("<%.2f, %.2f, %.2f>\n", x, y, z);
+}
+
+void Quaternion::print() const{
+    Serial.printf("%.2f + %.2fi + %.2fj + %.2fk", r, i, j, k);
+}
+
+void Quaternion::println() const{
+    Serial.printf("%.2f + %.2fi + %.2fj + %.2fk\n", r, i, j, k);
+}
 
 //debugging
 void BNO085_SPI::debugPrintRx(SHTPHeader packet, bool printBuffer){

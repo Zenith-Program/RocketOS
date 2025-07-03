@@ -20,6 +20,9 @@ namespace Airbrakes{
             float_t x; 
             float_t y; 
             float_t z;
+
+            void print() const;
+            void println() const;
         };
 
         struct Quaternion{
@@ -27,6 +30,9 @@ namespace Airbrakes{
             float_t i;
             float_t j;
             float_t k;
+
+            void print() const;
+            void println() const;
         };
 
         class BNO085_SPI{
@@ -116,8 +122,11 @@ namespace Airbrakes{
             uint_t& getSamplePeriod(IMUData);
             IMUSensorStatus& getStatus(IMUData);
             static uint_t getQPoint(IMUData);
+            Vector3& getVector(IMUData);
 
             uint_t getMaxSamplePeriod() const;
+
+            static float_t pow2(uint_t);
 
         private:
             // ######### command structure #########
@@ -131,16 +140,47 @@ namespace Airbrakes{
                 //sub command list
 
                 //commands
-                const std::array<Command, 2> c_rootCommands{
-                    Command{"wake", "", [this](arg_t){
-                        wakeAsync();
-                    }},
+                const std::array<Command, 6> c_rootCommands{
                     Command{"status", "", [this](arg_t){
                         IMUStates state = getState();
                         if(state == IMUStates::Uninitialized) Serial.println("Uninitialized");
                         if(state == IMUStates::Reseting) Serial.println("Reseting");
                         if(state == IMUStates::Configuring) Serial.println("Configuring");
                         if(state == IMUStates::Operational) Serial.println("Operational");
+                        auto printStatus = [](IMUSensorStatus status){
+                            if(status == IMUSensorStatus::Disabled) Serial.print("Disabled");
+                            if(status == IMUSensorStatus::Unreliable) Serial.print("Unreliable");
+                            if(status == IMUSensorStatus::LowAccuracy) Serial.print("Low Accuracy");
+                            if(status == IMUSensorStatus::ModerateAccuracy) Serial.print("Moderate Accuracy");
+                            if(status == IMUSensorStatus::HighAccuracy) Serial.print("High Accuracy");
+                        };
+                        Serial.print("Linear Acceleration - ");
+                        printStatus(m_LinearAccelerationStatus);
+                        Serial.print("\nAngular Velocity - ");
+                        printStatus(m_angularVelocityStatus);
+                        Serial.print("\nOrientation - ");
+                        printStatus(m_orientationStatus);
+                        Serial.print("\nGravity - ");
+                        printStatus(m_gravityStatus);
+                        Serial.println();
+                    }},
+                    Command{"acceleration", "", [this](arg_t){
+                        m_currentLinearAcceleration.println();
+                    }},
+                    Command{"angularVelocity", "", [this](arg_t){
+                        m_currentAngularVelocity.println();
+                    }},
+                    Command{"orientation", "", [this](arg_t){
+                        m_currentOrientation.println();
+                    }},
+                    Command{"gravity", "", [this](arg_t){
+                        m_currentGravity.println();
+                    }},
+                    Command{"reset", "", [this](arg_t){
+                        error_t error = initialize(); //hang
+                        if(error == ERROR_ResetTimeout) Serial.println("IMU failed to respond");
+                        else if(error == ERROR_ConfigurationTimeout) Serial.println("Reset the IMU. Failed to reconfigure the IMU");
+                        else Serial.println("Reset and reconfigured the IMU");
                     }}
                 };
         };
