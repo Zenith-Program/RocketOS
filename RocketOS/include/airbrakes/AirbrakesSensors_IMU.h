@@ -4,7 +4,7 @@
 #include <SPI.h>
 #include <array>
 #include <TeensyTimerTool.h>
-
+//
 namespace Airbrakes{
     namespace Sensors{
 
