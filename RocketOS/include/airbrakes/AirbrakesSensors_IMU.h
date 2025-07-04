@@ -81,8 +81,8 @@ namespace Airbrakes{
             Vector3 m_currentAngularVelocity;
             Vector3 m_currentGravity;
             Quaternion m_currentOrientation;
-            IMUSensorStatus m_LinearAccelerationStatus, m_angularVelocityStatus, m_gravityStatus, m_orientationStatus;
-            uint32_t m_LinearAccelerationSamplePeriod_us, m_angularVelocitySamplePeriod_us, m_gravitySamplePeriod_us, m_orientationSamplePeriod_us;
+            IMUSensorStatus m_linearAccelerationStatus, m_angularVelocityStatus, m_gravityStatus, m_orientationStatus;
+            uint32_t m_linearAccelerationSamplePeriod_us, m_angularVelocitySamplePeriod_us, m_gravitySamplePeriod_us, m_orientationSamplePeriod_us;
 
         public:
             //interface
@@ -90,7 +90,8 @@ namespace Airbrakes{
             error_t initialize();
             IMUStates getState() const;
             RocketOS::Shell::CommandList getCommands();
-
+            void setSamplePeriod_us(uint32_t, IMUData);
+            void setSamplePeriod_us(uint32_t);
         private:
 
             //helpers
@@ -126,8 +127,6 @@ namespace Airbrakes{
 
             uint_t getMaxSamplePeriod() const;
 
-            static float_t pow2(uint_t);
-
         private:
             // ######### command structure #########
             using Command = RocketOS::Shell::Command;
@@ -136,9 +135,65 @@ namespace Airbrakes{
 
             // === ROOT COMMAND LIST ===
                 //child command lists
+                // === PERIOD COMMAND ===
+                    //child command lists
+                    // === SET COMMAND ===
+                        //commands
+                        const std::array<Command, 5> c_periodSetCommands{
+                            Command{"", "u", [this](arg_t args){
+                                uint_t newPeriod = args[0].getUnsignedData();
+                                setSamplePeriod_us(newPeriod);
+                            }},
+                            Command{"acceleration", "u", [this](arg_t args){
+                                uint_t newPeriod = args[0].getUnsignedData();
+                                setSamplePeriod_us(newPeriod, IMUData::LinearAcceleration);
+                            }},
+                            Command{"angularVelocity", "u", [this](arg_t args){
+                                uint_t newPeriod = args[0].getUnsignedData();
+                                setSamplePeriod_us(newPeriod, IMUData::AngularVelocity);
+                            }},
+                            Command{"orientation", "u", [this](arg_t args){
+                                uint_t newPeriod = args[0].getUnsignedData();
+                                setSamplePeriod_us(newPeriod, IMUData::Orientation);
+                            }},
+                            Command{"gravity", "u", [this](arg_t args){
+                                uint_t newPeriod = args[0].getUnsignedData();
+                                setSamplePeriod_us(newPeriod, IMUData::Gravity);
+                            }},
+                        };
+                    // ===================
+                    //sub command list
+                    const std::array<CommandList, 1> c_periodCommandList = {
+                        CommandList{"set", c_periodSetCommands.data(), c_periodSetCommands.size(), nullptr, 0}
+                    };
+                    //command list
+                    const std::array<Command, 1> c_periodCommands = {
+                        Command{"", "", [this](arg_t){
+                            Serial.printf("Linear Acceleration - %dus\n", m_linearAccelerationSamplePeriod_us);
+                            Serial.printf("Angular Velocity - %dus\n", m_angularVelocitySamplePeriod_us);
+                            Serial.printf("Orientation - %dus\n", m_orientationSamplePeriod_us);
+                            Serial.printf("Gravity - %dus\n", m_gravitySamplePeriod_us);
+                        }}
+                    };
+                // ======================
 
+                // === speed sub command ===
+                    //commands
+                    const std::array<Command, 2> c_speedCommands{
+                        Command{"", "", [this](arg_t){
+                            Serial.printf("%dHz\n", m_SPIFrequency);
+                        }},
+                        Command{"set", "u", [this](arg_t args){
+                            uint_t newFrequency = args[0].getUnsignedData();
+                            m_SPIFrequency = newFrequency;
+                        }}
+                    };
+                // =========================
                 //sub command list
-
+                const std::array<CommandList, 2> c_rootCommandList{
+                    CommandList{"period", c_periodCommands.data(), c_periodCommands.size(), c_periodCommandList.data(), c_periodCommandList.size()},
+                    CommandList{"speed", c_speedCommands.data(), c_speedCommands.size(), nullptr, 0}
+                };
                 //commands
                 const std::array<Command, 6> c_rootCommands{
                     Command{"status", "", [this](arg_t){
@@ -155,26 +210,32 @@ namespace Airbrakes{
                             if(status == IMUSensorStatus::HighAccuracy) Serial.print("High Accuracy");
                         };
                         Serial.print("Linear Acceleration - ");
-                        printStatus(m_LinearAccelerationStatus);
-                        Serial.print("\nAngular Velocity - ");
+                        printStatus(m_linearAccelerationStatus);
+                        Serial.printf(", %.2fHz\n", 1000000.0 / m_linearAccelerationSamplePeriod_us);
+                        Serial.print("Angular Velocity - ");
                         printStatus(m_angularVelocityStatus);
-                        Serial.print("\nOrientation - ");
+                        Serial.printf(", %.2fHz\n", 1000000.0 / m_angularVelocitySamplePeriod_us);
+                        Serial.print("Orientation - ");
                         printStatus(m_orientationStatus);
-                        Serial.print("\nGravity - ");
+                        Serial.printf(", %.2fHz\n", 1000000.0 / m_orientationSamplePeriod_us);
+                        Serial.print("Gravity - ");
                         printStatus(m_gravityStatus);
-                        Serial.println();
+                        Serial.printf(", %.2fHz\n", 1000000.0 / m_gravitySamplePeriod_us);
                     }},
                     Command{"acceleration", "", [this](arg_t){
-                        m_currentLinearAcceleration.println();
+                        m_currentLinearAcceleration.print();
+                        Serial.println("m/s^2");
                     }},
                     Command{"angularVelocity", "", [this](arg_t){
-                        m_currentAngularVelocity.println();
+                        m_currentAngularVelocity.print();
+                        Serial.println("rad/s");
                     }},
                     Command{"orientation", "", [this](arg_t){
-                        m_currentOrientation.println();
+                        m_currentOrientation.print();
                     }},
                     Command{"gravity", "", [this](arg_t){
-                        m_currentGravity.println();
+                        m_currentGravity.print();
+                        Serial.println("m/s^2");
                     }},
                     Command{"reset", "", [this](arg_t){
                         error_t error = initialize(); //hang

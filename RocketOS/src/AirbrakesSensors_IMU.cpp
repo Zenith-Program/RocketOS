@@ -101,6 +101,14 @@ using namespace Sensors;
 #define SHTP_FEATURE_RESPONSE_ID 0xFC
 /*same structure as set feature command*/
 
+// === batch report ===
+#define SHTP_BATCH_REPORT_LENGTH 5
+#define SHTP_BATCH_REPORT_ID 0xFB
+
+#define SHTP_BATCH_REPORT_ID_BYTE 0
+#define SHTP_BATCH_REPORT_DELTA_LSB 1
+#define SHTP_BATCH_REPORT_DELTA_SIZE 4
+
 // === vector report ===
 #define SHTP_VECTOR_REPORT_LENGTH 10
 #define SHTP_VECTOR_REPORT_ID_BYTE 0
@@ -135,7 +143,7 @@ using namespace Sensors;
 #define SHTP_ORIENTATION_REPORT_REAL_LSB_BYTE 10
 #define SHTP_ORIENTATION_REPORT_REAL_MSB_BYTE 11
 #define SHTP_ORIENTATION_REPORT_ACCURACY_LSB_BYTE 12
-#define SHTP_ORIENTATION_REPORT_ACCURACY_MSB_BYTE 12
+#define SHTP_ORIENTATION_REPORT_ACCURACY_MSB_BYTE 13
 
 #define SHTP_ORIENTATION_Q_POINT 14 //location of the binary decimal point
 
@@ -143,10 +151,10 @@ using namespace Sensors;
 
 
 
-
+//public interface implementation
 BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency, uint32_t samplePeriod, TeensyTimerTool::TimerGenerator* timer) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized), m_resetComplete(false), m_hubInitialized(false), m_waking(false), m_timer(timer), 
-    m_LinearAccelerationStatus(IMUSensorStatus::Disabled), m_angularVelocityStatus(IMUSensorStatus::Disabled), m_gravityStatus(IMUSensorStatus::Disabled), m_orientationStatus(IMUSensorStatus::Disabled), 
-    m_LinearAccelerationSamplePeriod_us(samplePeriod), m_angularVelocitySamplePeriod_us(samplePeriod), m_gravitySamplePeriod_us(samplePeriod), m_orientationSamplePeriod_us(samplePeriod)
+    m_linearAccelerationStatus(IMUSensorStatus::Disabled), m_angularVelocityStatus(IMUSensorStatus::Disabled), m_gravityStatus(IMUSensorStatus::Disabled), m_orientationStatus(IMUSensorStatus::Disabled), 
+    m_linearAccelerationSamplePeriod_us(samplePeriod), m_angularVelocitySamplePeriod_us(samplePeriod), m_gravitySamplePeriod_us(samplePeriod), m_orientationSamplePeriod_us(samplePeriod)
     {
         m_txBuffer.fill(0xFF);
         m_rxBuffer.fill(0xFF);
@@ -154,7 +162,7 @@ BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency, uint32_t samplePeriod
     }
 
 RocketOS::Shell::CommandList BNO085_SPI::getCommands(){
-    return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), nullptr, 0};
+    return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootCommandList.data(), c_rootCommandList.size()};
 }
 
 IMUStates BNO085_SPI::getState() const{
@@ -191,6 +199,22 @@ error_t BNO085_SPI::initialize(){
     }
 }
 
+void BNO085_SPI::setSamplePeriod_us(uint32_t period, IMUData dataType){
+    getSamplePeriod(dataType) = period;
+    m_txQueue.push(makeFeatureCallback(dataType));
+}
+
+void BNO085_SPI::setSamplePeriod_us(uint32_t period){
+    getSamplePeriod(IMUData::AngularVelocity) = period;
+    getSamplePeriod(IMUData::LinearAcceleration) = period;
+    getSamplePeriod(IMUData::Orientation) = period;
+    getSamplePeriod(IMUData::Gravity) = period;
+    m_txQueue.push(makeFeatureCallback(IMUData::AngularVelocity));
+    m_txQueue.push(makeFeatureCallback(IMUData::LinearAcceleration));
+    m_txQueue.push(makeFeatureCallback(IMUData::Orientation));
+    m_txQueue.push(makeFeatureCallback(IMUData::Gravity));
+}
+
 
 //helper functions
 
@@ -198,7 +222,7 @@ void BNO085_SPI::resetAsync(){
     m_state = IMUStates::Reseting;
     m_resetComplete = false;
     m_hubInitialized = false;
-    m_LinearAccelerationStatus = IMUSensorStatus::Disabled;
+    m_linearAccelerationStatus = IMUSensorStatus::Disabled;
     m_angularVelocityStatus = IMUSensorStatus::Disabled;
     m_gravityStatus = IMUSensorStatus::Disabled;
     m_orientationStatus = IMUSensorStatus::Disabled;
@@ -247,7 +271,7 @@ void BNO085_SPI::serviceInterrupt(){
             m_timer.begin([this](){this->serviceTimer();});
             m_timer.trigger(WAKEUP_TIMER_PERIOD_us);
         }
-        if(m_state == IMUStates::Configuring && m_angularVelocityStatus != IMUSensorStatus::Disabled && m_LinearAccelerationStatus != IMUSensorStatus::Disabled && m_orientationStatus != IMUSensorStatus::Disabled && m_gravityStatus != IMUSensorStatus::Disabled){
+        if(m_state == IMUStates::Configuring && m_angularVelocityStatus != IMUSensorStatus::Disabled && m_linearAccelerationStatus != IMUSensorStatus::Disabled && m_orientationStatus != IMUSensorStatus::Disabled && m_gravityStatus != IMUSensorStatus::Disabled){
             m_state = IMUStates::Operational;
         }
         //handle wakeup case
@@ -354,8 +378,8 @@ bool BNO085_SPI::handleFeatureResponse(IMUData dataType, SHTPHeader packet){
     if(m_rxBuffer[SHTP_FEATURE_SENSOR_ID_BYTE] == getReportID(dataType)){
         uint32_t actualPeriod_us = static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE]) | 
         static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 8) |
-        static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 16) |
-        static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 24);
+        static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 2] << 16) |
+        static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 3] << 24);
         getSamplePeriod(dataType) = actualPeriod_us;
         if(getStatus(dataType) == IMUSensorStatus::Disabled) getStatus(dataType) = IMUSensorStatus::Unreliable;
         return true;
@@ -364,24 +388,27 @@ bool BNO085_SPI::handleFeatureResponse(IMUData dataType, SHTPHeader packet){
 }
 
 bool BNO085_SPI::handleVectorReport(IMUData dataType, SHTPHeader packet){
-    if(packet.length != SHTP_VECTOR_REPORT_LENGTH + SHTP_HEADER_SIZE) return false;
+    if(packet.length != SHTP_BATCH_REPORT_LENGTH + SHTP_VECTOR_REPORT_LENGTH + SHTP_HEADER_SIZE) return false;
     if(packet.channel != SHTP_INPUT_SENSOR_CHANNEL) return false;
     if(packet.continuation) return false;
-    if(m_rxBuffer[SHTP_VECTOR_REPORT_ID_BYTE] != getReportID(dataType)) return false;
+    //check for batch report id
+    if(m_rxBuffer[SHTP_BATCH_REPORT_ID_BYTE] != SHTP_BATCH_REPORT_ID) return false;
+    //check sensor report ID
+    if(m_rxBuffer[SHTP_VECTOR_REPORT_ID_BYTE + SHTP_BATCH_REPORT_LENGTH] != getReportID(dataType)) return false;
     //read status value
     IMUSensorStatus status = IMUSensorStatus::Unreliable;
-    uint8_t statusBits = m_rxBuffer[SHTP_VECTOR_REPORT_STATUS_BYTE] & SHTP_VECTOR_REPORT_ACCURACY_BITS;
+    uint8_t statusBits = m_rxBuffer[SHTP_VECTOR_REPORT_STATUS_BYTE + SHTP_BATCH_REPORT_LENGTH] & SHTP_VECTOR_REPORT_ACCURACY_BITS;
     if(statusBits == 1) status = IMUSensorStatus::LowAccuracy;
     if(statusBits == 2) status = IMUSensorStatus::ModerateAccuracy;
     if(statusBits == 3) status = IMUSensorStatus::HighAccuracy;
     getStatus(dataType) = status;
     //read vector value
-    uint16_t xValue = static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_X_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_X_MSB_BYTE]) << 8);
-    uint16_t yValue = static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Y_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Y_MSB_BYTE]) << 8);
-    uint16_t zValue = static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Z_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Z_MSB_BYTE]) << 8);
-    float_t xFloat = static_cast<float_t>(xValue) / pow2(getQPoint(dataType));
-    float_t yFloat = static_cast<float_t>(yValue) / pow2(getQPoint(dataType));
-    float_t zFloat = static_cast<float_t>(zValue) / pow2(getQPoint(dataType));
+    int16_t xValue = static_cast<int16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_X_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_X_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    int16_t yValue = static_cast<int16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Y_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Y_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    int16_t zValue = static_cast<int16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Z_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_VECTOR_REPORT_Z_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    float_t xFloat = static_cast<float_t>(xValue) / (1u << getQPoint(dataType));
+    float_t yFloat = static_cast<float_t>(yValue) / (1u << getQPoint(dataType));
+    float_t zFloat = static_cast<float_t>(zValue) / (1u << getQPoint(dataType));
     Vector3& storageValue = getVector(dataType);
     storageValue.x = xFloat;
     storageValue.y = yFloat;
@@ -390,26 +417,29 @@ bool BNO085_SPI::handleVectorReport(IMUData dataType, SHTPHeader packet){
 }
 
 bool BNO085_SPI::handleOrientationReport(SHTPHeader packet){
-    if(packet.length != SHTP_ORIENTATION_REPORT_LENGTH + SHTP_HEADER_SIZE) return false;
+    if(packet.length != SHTP_BATCH_REPORT_LENGTH + SHTP_ORIENTATION_REPORT_LENGTH + SHTP_HEADER_SIZE) return false;
     if(packet.channel != SHTP_INPUT_SENSOR_CHANNEL) return false;
     if(packet.continuation) return false;
-    if(m_rxBuffer[SHTP_ORIENTATION_REPORT_ID_BYTE] != getReportID(IMUData::Orientation)) return false;
+    //check for batch report id
+    if(m_rxBuffer[SHTP_BATCH_REPORT_ID_BYTE] != SHTP_BATCH_REPORT_ID) return false;
+    //check report id
+    if(m_rxBuffer[SHTP_ORIENTATION_REPORT_ID_BYTE + SHTP_BATCH_REPORT_LENGTH] != getReportID(IMUData::Orientation)) return false;
     //read status value
     IMUSensorStatus status = IMUSensorStatus::Unreliable;
-    uint8_t statusBits = m_rxBuffer[SHTP_ORIENTATION_REPORT_STATUS_BYTE] & SHTP_ORIENTATION_REPORT_ACCURACY_BITS;
+    uint8_t statusBits = m_rxBuffer[SHTP_ORIENTATION_REPORT_STATUS_BYTE + SHTP_BATCH_REPORT_LENGTH] & SHTP_ORIENTATION_REPORT_ACCURACY_BITS;
     if(statusBits == 1) status = IMUSensorStatus::LowAccuracy;
     if(statusBits == 2) status = IMUSensorStatus::ModerateAccuracy;
     if(statusBits == 3) status = IMUSensorStatus::HighAccuracy;
     m_orientationStatus = status;
     //read quaternion value
-    uint16_t rValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_REAL_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_REAL_MSB_BYTE]) << 8);
-    uint16_t iValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_I_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_I_MSB_BYTE]) << 8);
-    uint16_t jValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_J_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_J_MSB_BYTE]) << 8);
-    uint16_t kValue = static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_K_LSB_BYTE]) | (static_cast<uint16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_K_MSB_BYTE]) << 8);
-    float_t rFloat = static_cast<float_t>(rValue) / pow2(getQPoint(IMUData::Orientation));
-    float_t iFloat = static_cast<float_t>(iValue) / pow2(getQPoint(IMUData::Orientation));
-    float_t jFloat = static_cast<float_t>(jValue) / pow2(getQPoint(IMUData::Orientation));
-    float_t kFloat = static_cast<float_t>(kValue) / pow2(getQPoint(IMUData::Orientation));
+    int16_t rValue = static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_REAL_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_REAL_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    int16_t iValue = static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_I_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_I_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    int16_t jValue = static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_J_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_J_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    int16_t kValue = static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_K_LSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) | (static_cast<int16_t>(m_rxBuffer[SHTP_ORIENTATION_REPORT_K_MSB_BYTE + SHTP_BATCH_REPORT_LENGTH]) << 8);
+    float_t rFloat = static_cast<float_t>(rValue) / (1u << getQPoint(IMUData::Orientation));
+    float_t iFloat = static_cast<float_t>(iValue) / (1u << getQPoint(IMUData::Orientation));
+    float_t jFloat = static_cast<float_t>(jValue) / (1u << getQPoint(IMUData::Orientation));
+    float_t kFloat = static_cast<float_t>(kValue) / (1u << getQPoint(IMUData::Orientation));
     m_currentOrientation.r = rFloat;
     m_currentOrientation.i = iFloat;
     m_currentOrientation.j = jFloat;
@@ -492,7 +522,7 @@ uint_t& BNO085_SPI::getSamplePeriod(IMUData data){
     switch(data){
         case IMUData::Orientation: return m_orientationSamplePeriod_us;
         case IMUData::AngularVelocity: return m_angularVelocitySamplePeriod_us;
-        case IMUData::LinearAcceleration: return m_LinearAccelerationSamplePeriod_us;
+        case IMUData::LinearAcceleration: return m_linearAccelerationSamplePeriod_us;
         case IMUData::Gravity: 
         default: return m_gravitySamplePeriod_us;
     }
@@ -502,7 +532,7 @@ IMUSensorStatus& BNO085_SPI::getStatus(IMUData data){
     switch(data){
         case IMUData::Orientation: return m_orientationStatus;
         case IMUData::AngularVelocity: return m_angularVelocityStatus;
-        case IMUData::LinearAcceleration: return m_LinearAccelerationStatus;
+        case IMUData::LinearAcceleration: return m_linearAccelerationStatus;
         case IMUData::Gravity: 
         default: return m_gravityStatus;
     }
@@ -528,14 +558,7 @@ Vector3& BNO085_SPI::getVector(IMUData data){
 }
 
 uint_t BNO085_SPI::getMaxSamplePeriod() const{
-    return max(m_LinearAccelerationSamplePeriod_us, max(m_orientationSamplePeriod_us, max(m_gravitySamplePeriod_us, m_angularVelocitySamplePeriod_us)));
-}
-
-float_t BNO085_SPI::pow2(uint_t n){
-    float_t value = 1;
-    for(uint_t i=0; i<n; i++)
-        value/=2;
-    return value;
+    return max(m_linearAccelerationSamplePeriod_us, max(m_orientationSamplePeriod_us, max(m_gravitySamplePeriod_us, m_angularVelocitySamplePeriod_us)));
 }
 
 //output struct print functionality

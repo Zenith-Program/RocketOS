@@ -76,8 +76,8 @@ namespace Airbrakes{
                             Serial.println("Hz");
                         }},
                         Command{"set", "u", [this](arg_t args){
-                            uint_t newPeriod = args[0].getUnsignedData();
-                            m_SPIFrequency = newPeriod;
+                            uint_t newFrequency = args[0].getUnsignedData();
+                            m_SPIFrequency = newFrequency;
                         }}
                     };
                 // ==========================
