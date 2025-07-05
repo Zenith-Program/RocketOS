@@ -151,10 +151,44 @@ using namespace Sensors;
 
 #define SHTP_ORIENTATION_REPORT_ACCURACY_BITS 0x03
 
+// === tare function ===
+//page 49 of SH2 manual
+#define SHTP_TARE_PAYLOAD_LENGTH 12
+#define SHTP_TARE_ID 0xF2
+#define SHTP_TARE_COMMAND 0x03
+#define SHTP_TARE_SUBCOMMAND 0x00
+#define SHTP_TARE_X_BIT 0b00000001
+#define SHTP_TARE_Y_BIT 0b00000010
+#define SHTP_TARE_Z_BIT 0b00000100
+#define SHTP_TARE_USE_ROTATION_VECTOR 0x00
+
+#define SHTP_TARE_ID_BYTE 0
+#define SHTP_TARE_SEQUENCE_BYTE 1
+#define SHTP_TARE_COMMAND_BYTE 2
+#define SHTP_TARE_SUBCOMMAND_BYTE 3
+#define SHTP_TARE_AXIS_BYTE 4
+#define SHTP_TARE_VECTOR_BYTE 5
+#define SHTP_TARE_FIRST_RESERVED_BYTE 6
+#define SHTP_TARE_NUM_RESERVED_BYTES 6
+
+// === persist tare function ===
+//page 49 of SH2 manual
+#define SHTP_PERSIST_TARE_PAYLOAD_LENGTH 12
+#define SHTP_PERSIST_TARE_ID 0xF2
+#define SHTP_PERSIST_TARE_COMMAND 0x03
+#define SHTP_PERSIST_TARE_SUBCOMMAND 0x01
+
+#define SHTP_PERSIST_TARE_ID_BYTE 0
+#define SHTP_PERSIST_TARE_SEQUENCE_BYTE 1
+#define SHTP_PERSIST_TARE_COMMAND_BYTE 2
+#define SHTP_PERSIST_TARE_SUBCOMMAND_BYTE 3
+#define SHTP_PERSIST_TARE_FIRST_RESERVED_BYTE 4
+#define SHTP_PERSIST_TARE_NUM_RESERVED_BYTES 8
+
 
 
 //public interface implementation
-BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency, uint32_t samplePeriod) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized), m_resetComplete(false), m_hubInitialized(false), m_waking(false), m_wakeTimer(0), m_wakeTime(NO_WAKEUP),
+BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency, uint32_t samplePeriod) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized), m_resetComplete(false), m_hubInitialized(false), m_waking(false), m_tareSequenceNumber(0), m_wakeTimer(0), m_wakeTime(NO_WAKEUP),
     m_linearAccelerationStatus(IMUSensorStatus::Disabled), m_angularVelocityStatus(IMUSensorStatus::Disabled), m_gravityStatus(IMUSensorStatus::Disabled), m_orientationStatus(IMUSensorStatus::Disabled), 
     m_linearAccelerationSamplePeriod_us(samplePeriod), m_angularVelocitySamplePeriod_us(samplePeriod), m_gravitySamplePeriod_us(samplePeriod), m_orientationSamplePeriod_us(samplePeriod)
     {
@@ -225,6 +259,11 @@ void BNO085_SPI::stopSensor(IMUData dataType){
 void BNO085_SPI::startSensor(IMUData dataType){
     m_txQueue.push(makeFeatureCallback(dataType, getSamplePeriod(dataType)));
     m_txQueue.push(makeFeatureResponseCallback(dataType));
+}
+
+void BNO085_SPI::tare(){
+    m_txQueue.push(makeTareCallback());
+    m_txQueue.push(makeTarePersistCallback());
 }
 
 
@@ -534,6 +573,49 @@ BNO085_SPI::txCallback_t BNO085_SPI::makeFeatureResponseCallback(IMUData dataTyp
     };
 }
 
+BNO085_SPI::SHTPHeader BNO085_SPI::generateTareCommand(){
+    SHTPHeader header;
+    header.channel = SHTP_HUB_CHANNEL;
+    header.continuation = false;
+    header.length = SHTP_HEADER_SIZE + SHTP_TARE_PAYLOAD_LENGTH;
+    m_txBuffer[SHTP_TARE_ID_BYTE] = SHTP_TARE_ID;
+    m_txBuffer[SHTP_TARE_SEQUENCE_BYTE] = m_tareSequenceNumber++;
+    m_txBuffer[SHTP_TARE_COMMAND_BYTE] = SHTP_TARE_COMMAND;
+    m_txBuffer[SHTP_TARE_SUBCOMMAND_BYTE] = SHTP_TARE_SUBCOMMAND;
+    m_txBuffer[SHTP_TARE_AXIS_BYTE] = SHTP_TARE_X_BIT | SHTP_TARE_Y_BIT | SHTP_TARE_Z_BIT;
+    m_txBuffer[SHTP_TARE_VECTOR_BYTE] = SHTP_TARE_USE_ROTATION_VECTOR;
+    for(uint_t i=0; i<SHTP_TARE_NUM_RESERVED_BYTES; i++)
+        m_txBuffer[SHTP_TARE_FIRST_RESERVED_BYTE + i] = 0;
+    return header;
+}
+
+BNO085_SPI::txCallback_t BNO085_SPI::makeTareCallback(){
+    return [this](){
+        return this->generateTareCommand();
+    };
+}
+
+BNO085_SPI::SHTPHeader BNO085_SPI::generateTarePersistCommand(){
+    SHTPHeader header;
+    header.channel = SHTP_HUB_CHANNEL;
+    header.continuation = false;
+    header.length = SHTP_HEADER_SIZE + SHTP_PERSIST_TARE_PAYLOAD_LENGTH;
+    m_txBuffer[SHTP_PERSIST_TARE_ID_BYTE] = SHTP_PERSIST_TARE_ID;
+    m_txBuffer[SHTP_PERSIST_TARE_SEQUENCE_BYTE] = m_tareSequenceNumber++;
+    m_txBuffer[SHTP_PERSIST_TARE_COMMAND_BYTE] = SHTP_PERSIST_TARE_COMMAND;
+    m_txBuffer[SHTP_PERSIST_TARE_SUBCOMMAND_BYTE] = SHTP_PERSIST_TARE_SUBCOMMAND;
+    for(uint_t i=0; i<SHTP_PERSIST_TARE_NUM_RESERVED_BYTES; i++)
+        m_txBuffer[SHTP_PERSIST_TARE_FIRST_RESERVED_BYTE + i] = 0;
+    return header;
+}
+
+BNO085_SPI::txCallback_t BNO085_SPI::makeTarePersistCallback(){
+    return [this](){
+        return this->generateTarePersistCommand();
+    };
+}
+
+//general helper functions
 uint8_t BNO085_SPI::getReportID(IMUData data){
     switch(data){
         case IMUData::Orientation: return SHTP_ORIENTATION_ID;
@@ -621,8 +703,4 @@ void BNO085_SPI::debugPrintTx(SHTPHeader packet, bool printBuffer){
         Serial.println();
     }
 }
-
-
-
-//header
 

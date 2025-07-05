@@ -70,7 +70,8 @@ namespace Airbrakes{
             bool m_resetComplete, m_hubInitialized, m_waking;
             std::array<uint8_t, Airbrakes_CFG_IMUBufferSize> m_rxBuffer;
             std::array<uint8_t, Airbrakes_CFG_IMUBufferSize> m_txBuffer;
-            std::array<uint_t, c_numSHTPChannels> m_sequenceNumbers;
+            std::array<uint8_t, c_numSHTPChannels> m_sequenceNumbers;
+            uint8_t m_tareSequenceNumber;
             RocketOS::Utilities::Queue<txCallback_t, Airbrekes_CFG_IMUTxQueueSize> m_txQueue;
             elapsedMicros m_wakeTimer;
             uint_t m_wakeTime;
@@ -93,6 +94,7 @@ namespace Airbrakes{
             void setSamplePeriod_us(uint32_t);
             void stopSensor(IMUData);
             void startSensor(IMUData);
+            void tare();
         private:
 
             //helpers
@@ -118,6 +120,12 @@ namespace Airbrakes{
             txCallback_t makeFeatureCallback(IMUData, uint32_t);
             SHTPHeader generateFeatureResponseCommand(IMUData);
             txCallback_t makeFeatureResponseCallback(IMUData);
+
+            //tare functionality
+            SHTPHeader generateTareCommand();
+            txCallback_t makeTareCallback();
+            SHTPHeader generateTarePersistCommand();
+            txCallback_t makeTarePersistCallback();
 
             static uint8_t getReportID(IMUData);
             uint_t& getSamplePeriod(IMUData);
@@ -252,7 +260,7 @@ namespace Airbrakes{
                     CommandList{"speed", c_speedCommands.data(), c_speedCommands.size(), nullptr, 0}
                 };
                 //commands
-                const std::array<Command, 2> c_rootCommands{
+                const std::array<Command, 3> c_rootCommands{
                     Command{"status", "", [this](arg_t){
                         IMUStates state = getState();
                         if(state == IMUStates::Uninitialized) Serial.println("Uninitialized");
@@ -279,8 +287,11 @@ namespace Airbrakes{
                         printStatus(m_gravityStatus);
                         Serial.printf(", %.2fHz\n", 1000000.0 / m_gravitySamplePeriod_us);
                     }},
+                    Command{"tare", "", [this](arg_t){
+                        tare();
+                    }},
                     Command{"reset", "", [this](arg_t){
-                        if(initialize() != error_t::GOOD) Serial.println("IMU failed to respond");
+                        resetAsync();
                     }}
                 };
         };
