@@ -6,6 +6,9 @@
 namespace Airbrakes{
     namespace Sensors{
         class MS5607_SPI{
+        public:
+            static constexpr error_t ERROR_NotInitialized = error_t(2);
+            static constexpr error_t ERROR_NotResponsive = error_t(3);
         private:
             static constexpr uint_t c_numCalibrationCoefficients = 8;
             const char* const m_name;
@@ -19,18 +22,28 @@ namespace Airbrakes{
             float_t m_pressure_pa;
             float_t m_temperature_k;
             float_t m_altitude_m;
+            float_t m_groundLevelTemperature_k;
+            float_t m_groundLevelPressure_pa;
         public:
-            MS5607_SPI(const char*, uint_t, TeensyTimerTool::TimerGenerator*);
+            //interface
+            MS5607_SPI(const char*, float_t, float_t, uint_t, TeensyTimerTool::TimerGenerator*);
             error_t initialize();
             bool initialized() const;
             error_t updateBlocking();
             void updateAsync();
-            result_t<float_t> getPressure();
-            result_t<float_t> getTemperature();
-            float_t getPressureAsync();
-            float_t getTemperatureAsync();
+            result_t<float_t> getNewPressure();
+            result_t<float_t> getNewTemperature();
+            result_t<float_t> getNewAltitude();
+            float_t getLastPressure();
+            float_t getLastTemperature();
+            float_t getLastAltitude();
+            error_t zero();
             RocketOS::Shell::CommandList getCommands();
+
+            //references for persistent
             uint_t& getSPIFrequencyRef();
+            float_t& getGroundPressureRef();
+            float_t& getGroundTemperatureRef();
         private:
             void resetDevice();
             result_t<uint16_t> getCalibrationCoefficient(uint_t n);
@@ -87,9 +100,9 @@ namespace Airbrakes{
                     CommandList{"speed", c_speedCommands.data(), c_speedCommands.size(), nullptr, 0}
                 };
                 //commands
-                const std::array<Command, 2> c_rootCommands{
+                const std::array<Command, 4> c_rootCommands{
                     Command{"pressure", "", [this](arg_t){
-                        result_t<float_t> result = getPressure();
+                        result_t<float_t> result = getNewPressure();
                         if(result.error == error_t::GOOD){ 
                             Serial.print(result.data);
                             Serial.println("pa");
@@ -98,18 +111,32 @@ namespace Airbrakes{
                         else Serial.println("Error reading from altimeter");
                     }},
                     Command{"temperature", "", [this](arg_t){
-                        result_t<float_t> result = getTemperature();
+                        result_t<float_t> result = getNewTemperature();
                         if(result.error == error_t::GOOD){ 
                             Serial.print(result.data);
                             Serial.println("K");
                         }
                         else if(result.error == error_t(2)) Serial.println("Altimeter is not initialized");
                         else Serial.println("Error reading from altimeter");
+                    }},
+                    Command{"altitude", "", [this](arg_t){
+                        result_t<float_t> result = getNewAltitude();
+                        if(result.error == error_t::GOOD){ 
+                            Serial.print(result.data);
+                            Serial.println("m");
+                        }
+                        else if(result.error == error_t(2)) Serial.println("Altimeter is not initialized");
+                        else Serial.println("Error reading from altimeter");
+                    }},
+                    Command{"zero", "", [this](arg_t){
+                        error_t error = zero();
+                        if(error != error_t::GOOD){
+                            if(error == error_t(2)) Serial.println("Altimeter is not initialized");
+                            else Serial.println("Error reading from altimeter");
+                        }
                     }}
                 };
             // =========================
-
-
         };
     }
 }

@@ -95,6 +95,18 @@ namespace Airbrakes{
             void stopSensor(IMUData);
             void startSensor(IMUData);
             void tare();
+
+            //references for persistent & telemetry
+            uint_t& getSPIFrequencyRef();
+            uint32_t& getAccelerationSamplePeriodRef();
+            uint32_t& getAngularVelocitySamplePeriodRef();
+            uint32_t& getOrientationSamplePeriodRef();
+            uint32_t& getGravitySamplePeriodRef();
+
+            const Vector3& getAccelerationRef() const;
+            const Vector3& getAngularVelocitryRef() const;
+            const Vector3& getGravityRef() const;
+            const Quaternion& getOrientationRef() const;
         private:
 
             //helpers

@@ -11,7 +11,7 @@ using namespace RocketOS::Simulation;
 
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //sensors
-    m_altimeter("altimeter", Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
+    m_altimeter("altimeter", Airbrakes_CFG_AltimeterNominalGroundTemperature, Airbrakes_CFG_AltimeterNominalGroundPressure, Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
     m_IMU("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us),
     //control syatems
     m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
@@ -50,7 +50,14 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<uint_t>{m_HILRefreshPeriod, Airbrakes_CFG_HILRefresh_ms, "simulation refresh"},
         EEPROMSettings<float_t>{m_controller.getDecayRateRef(), Airbrakes_CFG_DecayRate, "controller decay rate"},
         EEPROMSettings<float_t>{m_controller.getCoastVelocityRef(), 0, "controller coast velocity"},
-        EEPROMSettings<uint_t>{m_altimeter.getSPIFrequencyRef(), Airbrakes_CFG_AltimeterSPIFrequency, "altimeter SPI Speed"}
+        EEPROMSettings<uint_t>{m_altimeter.getSPIFrequencyRef(), Airbrakes_CFG_AltimeterSPIFrequency, "altimeter SPI speed"},
+        EEPROMSettings<float_t>{m_altimeter.getGroundTemperatureRef(), Airbrakes_CFG_AltimeterNominalGroundTemperature, "altimeter ground temperature"},
+        EEPROMSettings<float_t>{m_altimeter.getGroundPressureRef(), Airbrakes_CFG_AltimeterNominalGroundPressure, "altimeter ground pressure"},
+        EEPROMSettings<uint_t>{m_IMU.getSPIFrequencyRef(), Airbrakes_CFG_IMU_SPIFrequency, "imu spi speed"},
+        EEPROMSettings<uint32_t>{m_IMU.getAccelerationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu acceleration sample period"},
+        EEPROMSettings<uint32_t>{m_IMU.getAngularVelocitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu angular velocity sample period"},
+        EEPROMSettings<uint32_t>{m_IMU.getOrientationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu oreintation sample period"},
+        EEPROMSettings<uint32_t>{m_IMU.getGravitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu gravity sample period"}
     ),
 
     //serial systems

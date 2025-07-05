@@ -21,6 +21,8 @@
 #define Airbrakes_CFG_HILRefresh_ms 10
 
 #define Airbrakes_CFG_AltimeterSPIFrequency 4000000
+#define Airbrakes_CFG_AltimeterNominalGroundPressure 101325
+#define Airbrakes_CFG_AltimeterNominalGroundTemperature 288.15
 
 #define Airbrakes_CFG_IMU_SPIFrequency 1000000
 #define Airbrakes_CFG_IMU_SamplePeriod_us 10000

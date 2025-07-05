@@ -144,7 +144,7 @@ error_t Interpreter::interpretCommandList(const CommandList* list, Token* tokens
 			} 
 			else{
 				//error if no command match, commandList match or default command exists
-				Serial.printf("<[Cmd:error] Command '%s' is not available in '%s' directory\n", m_commandBuffer, m_currentCommandList->getName());
+				Serial.printf("<[Cmd:error] Command '%s' is not available in '%s' directory\n", m_commandBuffer, list->getName());
 				return error_t::GOOD;
 			}
 		}

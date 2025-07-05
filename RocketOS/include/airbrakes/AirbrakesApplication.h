@@ -57,7 +57,14 @@ namespace Airbrakes{
             uint_t,         //simulation refresh period
             float_t,        //controller decay rate
             float_t,        //controller coast velocity
-            uint_t          //altimeter SPI speed
+            uint_t,         //altimeter SPI speed
+            float_t,        //altimeter ground pressure
+            float_t,        //altimeter ground temperature
+            uint_t,         //imu SPI speed
+            uint32_t,       //imu acceleration sample period
+            uint32_t,       //imu angular velocity sample period
+            uint32_t,       //imu orientation sample period
+            uint32_t        //imu gravity sample period
         > m_persistent;
 
         // --- serial port systems ---

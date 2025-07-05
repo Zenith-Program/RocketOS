@@ -206,8 +206,6 @@ IMUStates BNO085_SPI::getState() const{
 }
 
 error_t BNO085_SPI::initialize(){
-    //shutdown any previously initialized syatems
-    SPI1.end();
     //initialize wake pin
     pinMode(P0_PIN, OUTPUT);
     digitalWriteFast(P0_PIN, HIGH);
@@ -667,6 +665,43 @@ Vector3& BNO085_SPI::getVector(IMUData data){
 
 uint_t BNO085_SPI::getMaxSamplePeriod() const{
     return max(m_linearAccelerationSamplePeriod_us, max(m_orientationSamplePeriod_us, max(m_gravitySamplePeriod_us, m_angularVelocitySamplePeriod_us)));
+}
+
+//references
+uint_t& BNO085_SPI::getSPIFrequencyRef(){
+    return m_SPIFrequency;
+}
+
+uint32_t& BNO085_SPI::getAccelerationSamplePeriodRef(){
+    return m_linearAccelerationSamplePeriod_us;
+}
+
+uint32_t& BNO085_SPI::getAngularVelocitySamplePeriodRef(){
+    return m_angularVelocitySamplePeriod_us;
+}
+
+uint32_t& BNO085_SPI::getOrientationSamplePeriodRef(){
+    return m_orientationSamplePeriod_us;
+}
+
+uint32_t& BNO085_SPI::getGravitySamplePeriodRef(){
+    return m_gravitySamplePeriod_us;
+}
+
+const Vector3& BNO085_SPI::getAccelerationRef() const{
+    return m_currentLinearAcceleration;
+}
+
+const Vector3& BNO085_SPI::getAngularVelocitryRef() const{
+    return m_currentAngularVelocity;
+}
+
+const Vector3& BNO085_SPI::getGravityRef() const{
+    return m_currentGravity;
+}
+
+const Quaternion& BNO085_SPI::getOrientationRef() const{
+    return m_currentOrientation;
 }
 
 //output struct print functionality
