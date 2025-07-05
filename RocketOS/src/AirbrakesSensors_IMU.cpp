@@ -14,9 +14,11 @@ using namespace Sensors;
 
 //timings 
 #define RESET_SIGNAL_DURRATION_ns 100
-#define WAKEUP_TIMER_PERIOD_us 1000
-#define RESET_TIMEOUT_BASE_us 300000 
-#define RESET_TIMEOUT_GAIN 3
+#define FIRST_WAKEUP_PERIOD_us 1000
+#define MINIMUM_NOMINAL_WAKEUP_PERIOD_us 100000
+#define NOMINAL_WAKEUP_PERIOD_GAIN 2
+#define NO_WAKEUP 0
+#define RESET_TIMEOUT_us 200000 
 
 
 //protocol 
@@ -152,7 +154,7 @@ using namespace Sensors;
 
 
 //public interface implementation
-BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency, uint32_t samplePeriod, TeensyTimerTool::TimerGenerator* timer) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized), m_resetComplete(false), m_hubInitialized(false), m_waking(false), m_timer(timer), 
+BNO085_SPI::BNO085_SPI(const char* name, uint_t frequency, uint32_t samplePeriod) : m_name(name), m_SPIFrequency(frequency), m_state(IMUStates::Uninitialized), m_resetComplete(false), m_hubInitialized(false), m_waking(false), m_wakeTimer(0), m_wakeTime(NO_WAKEUP),
     m_linearAccelerationStatus(IMUSensorStatus::Disabled), m_angularVelocityStatus(IMUSensorStatus::Disabled), m_gravityStatus(IMUSensorStatus::Disabled), m_orientationStatus(IMUSensorStatus::Disabled), 
     m_linearAccelerationSamplePeriod_us(samplePeriod), m_angularVelocitySamplePeriod_us(samplePeriod), m_gravitySamplePeriod_us(samplePeriod), m_orientationSamplePeriod_us(samplePeriod)
     {
@@ -190,18 +192,18 @@ error_t BNO085_SPI::initialize(){
     //reset bno085
     resetAsync();
     elapsedMicros timeout = 0;
-    uint_t timeoutDurration_us = RESET_TIMEOUT_BASE_us + RESET_TIMEOUT_GAIN * getMaxSamplePeriod();
-    while(m_state != IMUStates::Operational && timeout < timeoutDurration_us);
+    uint_t timeoutDurration_us = RESET_TIMEOUT_us;
+    while(m_state != IMUStates::Operational && m_state != IMUStates::Configuring && timeout < timeoutDurration_us);
     switch(m_state){
-        case IMUStates::Operational: return error_t::GOOD;
-        case IMUStates::Configuring: return ERROR_ConfigurationTimeout;
-        default: return ERROR_ResetTimeout;
+        case IMUStates::Operational: 
+        case IMUStates::Configuring: return error_t::GOOD;
+        default: return error_t::ERROR;
     }
 }
 
 void BNO085_SPI::setSamplePeriod_us(uint32_t period, IMUData dataType){
-    getSamplePeriod(dataType) = period;
-    m_txQueue.push(makeFeatureCallback(dataType));
+    m_txQueue.push(makeFeatureCallback(dataType, period));
+    m_txQueue.push(makeFeatureResponseCallback(dataType));
 }
 
 void BNO085_SPI::setSamplePeriod_us(uint32_t period){
@@ -209,10 +211,20 @@ void BNO085_SPI::setSamplePeriod_us(uint32_t period){
     getSamplePeriod(IMUData::LinearAcceleration) = period;
     getSamplePeriod(IMUData::Orientation) = period;
     getSamplePeriod(IMUData::Gravity) = period;
-    m_txQueue.push(makeFeatureCallback(IMUData::AngularVelocity));
-    m_txQueue.push(makeFeatureCallback(IMUData::LinearAcceleration));
-    m_txQueue.push(makeFeatureCallback(IMUData::Orientation));
-    m_txQueue.push(makeFeatureCallback(IMUData::Gravity));
+    m_txQueue.push(makeFeatureCallback(IMUData::AngularVelocity, period));
+    m_txQueue.push(makeFeatureCallback(IMUData::LinearAcceleration, period));
+    m_txQueue.push(makeFeatureCallback(IMUData::Orientation, period));
+    m_txQueue.push(makeFeatureCallback(IMUData::Gravity, period));
+}
+
+void BNO085_SPI::stopSensor(IMUData dataType){
+    m_txQueue.push(makeFeatureCallback(dataType, 0));
+    m_txQueue.push(makeFeatureResponseCallback(dataType));
+}
+
+void BNO085_SPI::startSensor(IMUData dataType){
+    m_txQueue.push(makeFeatureCallback(dataType, getSamplePeriod(dataType)));
+    m_txQueue.push(makeFeatureResponseCallback(dataType));
 }
 
 
@@ -227,6 +239,7 @@ void BNO085_SPI::resetAsync(){
     m_gravityStatus = IMUSensorStatus::Disabled;
     m_orientationStatus = IMUSensorStatus::Disabled;
     m_txQueue.clear();
+    m_wakeTime = NO_WAKEUP;
     //assert reset pin
     digitalWriteFast(RESET_PIN, LOW);
     delayNanoseconds(RESET_SIGNAL_DURRATION_ns);
@@ -258,23 +271,23 @@ void BNO085_SPI::serviceInterrupt(){
         //do state transition
         if(m_state == IMUStates::Reseting && m_hubInitialized && m_resetComplete){
             m_state = IMUStates::Configuring;
-            m_txQueue.push(makeFeatureCallback(IMUData::Orientation));
-            m_txQueue.push(makeFeatureCallback(IMUData::LinearAcceleration));
-            m_txQueue.push(makeFeatureCallback(IMUData::AngularVelocity));
-            m_txQueue.push(makeFeatureCallback(IMUData::Gravity));
+            m_txQueue.push(makeFeatureCallback(IMUData::Orientation, m_orientationSamplePeriod_us));
+            m_txQueue.push(makeFeatureCallback(IMUData::LinearAcceleration, m_linearAccelerationSamplePeriod_us));
+            m_txQueue.push(makeFeatureCallback(IMUData::AngularVelocity, m_angularVelocitySamplePeriod_us));
+            m_txQueue.push(makeFeatureCallback(IMUData::Gravity, m_gravitySamplePeriod_us));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::Orientation));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::LinearAcceleration));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::AngularVelocity));
             m_txQueue.push(makeFeatureResponseCallback(IMUData::Gravity));
-            //set wakeup
-            m_timer.end();
-            m_timer.begin([this](){this->serviceTimer();});
-            m_timer.trigger(WAKEUP_TIMER_PERIOD_us);
+            //set first wakeup
+            m_wakeTimer = 0;
+            m_wakeTime = FIRST_WAKEUP_PERIOD_us;
         }
         if(m_state == IMUStates::Configuring && m_angularVelocityStatus != IMUSensorStatus::Disabled && m_linearAccelerationStatus != IMUSensorStatus::Disabled && m_orientationStatus != IMUSensorStatus::Disabled && m_gravityStatus != IMUSensorStatus::Disabled){
             m_state = IMUStates::Operational;
         }
-        //handle wakeup case
+        //handle wakeups
+        m_wakeTimer = 0;
         if(m_waking){
             digitalWriteFast(P0_PIN, HIGH);
             m_waking = false;
@@ -282,8 +295,12 @@ void BNO085_SPI::serviceInterrupt(){
     }
 }
 
-void BNO085_SPI::serviceTimer(){
-    wakeAsync();
+void BNO085_SPI::updateBackground(){
+    if(!m_txQueue.empty() && m_wakeTime != NO_WAKEUP && m_wakeTimer >= m_wakeTime){
+        m_wakeTime = max(MINIMUM_NOMINAL_WAKEUP_PERIOD_us, getMaxSamplePeriod() * NOMINAL_WAKEUP_PERIOD_GAIN);
+        m_wakeTimer = 0;
+        wakeAsync();
+    }
 }
 
 result_t<BNO085_SPI::SHTPHeader> BNO085_SPI::doSHTP(SHTPHeader txPacket){
@@ -293,10 +310,12 @@ result_t<BNO085_SPI::SHTPHeader> BNO085_SPI::doSHTP(SHTPHeader txPacket){
     uint8_t rxHeaderBytes[SHTP_HEADER_SIZE];
     uint8_t txHeaderBytes[SHTP_HEADER_SIZE];
     //set tx header bytes
-    txHeaderBytes[SHTP_LENGTH_LSB] = static_cast<uint8_t>(0x00FF & txPacket.length);
-    txHeaderBytes[SHTP_LENGTH_MSB] = static_cast<uint8_t>(0x7F00 & txPacket.length);
-    txHeaderBytes[SHTP_CHANNEL] = txPacket.channel;
-    txHeaderBytes[SHTP_SEQUENCE] = m_sequenceNumbers[txPacket.channel]++;
+    if(doTx){
+        txHeaderBytes[SHTP_LENGTH_LSB] = static_cast<uint8_t>(0x00FF & txPacket.length);
+        txHeaderBytes[SHTP_LENGTH_MSB] = static_cast<uint8_t>(0x7F00 & txPacket.length);
+        txHeaderBytes[SHTP_CHANNEL] = txPacket.channel;
+        txHeaderBytes[SHTP_SEQUENCE] = m_sequenceNumbers[txPacket.channel]++;
+    }
     //begin SPI transaction
     noInterrupts();
     SPI1.beginTransaction(SPISettings(m_SPIFrequency, MSBFIRST, SPI_MODE3));
@@ -380,7 +399,14 @@ bool BNO085_SPI::handleFeatureResponse(IMUData dataType, SHTPHeader packet){
         static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] << 8) |
         static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 2] << 16) |
         static_cast<uint32_t>(m_rxBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 3] << 24);
+        //check if sensor is shutdown
+        if(actualPeriod_us == 0){
+             getStatus(dataType) = IMUSensorStatus::Disabled;
+             return true;
+        }
+        //update actual sample period
         getSamplePeriod(dataType) = actualPeriod_us;
+        //check if sensor is starting up
         if(getStatus(dataType) == IMUSensorStatus::Disabled) getStatus(dataType) = IMUSensorStatus::Unreliable;
         return true;
     }
@@ -448,7 +474,7 @@ bool BNO085_SPI::handleOrientationReport(SHTPHeader packet){
 }
 
 //command generation-------------------------------------------
-BNO085_SPI::SHTPHeader BNO085_SPI::generateFeatureCommand(IMUData dataType){
+BNO085_SPI::SHTPHeader BNO085_SPI::generateFeatureCommand(IMUData dataType, uint32_t samplePeriod){
     //this comes from page 27 in the BNO08x data sheet
     //create header
     SHTPHeader header;
@@ -468,7 +494,7 @@ BNO085_SPI::SHTPHeader BNO085_SPI::generateFeatureCommand(IMUData dataType){
     m_txBuffer[SHTP_FEATURE_SENSITIVITY_LSB_BYTE] = 0;
     m_txBuffer[SHTP_FEATURE_SENSITIVITY_MSB_BYTE] = 0;
     //set sample interval
-    uint32_t interval_us = getSamplePeriod(dataType);
+    uint32_t interval_us = samplePeriod;
     m_txBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE] = static_cast<uint8_t>(interval_us);
     m_txBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 1] = static_cast<uint8_t>(interval_us >> 8);
     m_txBuffer[SHTP_FEATURE_REPORT_INTERVAL_LSB_BYTE + 2] = static_cast<uint8_t>(interval_us >> 16);
@@ -486,9 +512,9 @@ BNO085_SPI::SHTPHeader BNO085_SPI::generateFeatureCommand(IMUData dataType){
     return header;
 }
 
-BNO085_SPI::txCallback_t BNO085_SPI::makeFeatureCallback(IMUData dataType){
-    return [this, dataType](){
-        return this->generateFeatureCommand(dataType);
+BNO085_SPI::txCallback_t BNO085_SPI::makeFeatureCallback(IMUData dataType, uint32_t sampleRate){
+    return [this, dataType, sampleRate](){
+        return this->generateFeatureCommand(dataType, sampleRate);
     };
 }
 
@@ -595,3 +621,8 @@ void BNO085_SPI::debugPrintTx(SHTPHeader packet, bool printBuffer){
         Serial.println();
     }
 }
+
+
+
+//header
+

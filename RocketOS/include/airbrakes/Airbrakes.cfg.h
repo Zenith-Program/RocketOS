@@ -26,4 +26,4 @@
 #define Airbrakes_CFG_IMU_SamplePeriod_us 10000
 #define Airbrakes_CFG_IMUBufferSize 512
 #define Airbrekes_CFG_IMUTxQueueSize 16
-#define Airbrakes_CFG_IMUTxCallbackCaptureSize 8
+#define Airbrakes_CFG_IMUTxCallbackCaptureSize 12

@@ -7,10 +7,11 @@ using namespace RocketOS::Shell;
 
 //wueHVIUWBVCI
 
-Interpreter::Interpreter(const SerialInput& buffer, const CommandList* root) : m_rootCommandList(root), m_inputBuffer(buffer) {}
+Interpreter::Interpreter(const SerialInput& buffer, const CommandList* root) : m_rootCommandList(root), m_currentCommandList(root), m_inputBuffer(buffer) {}
 
 void Interpreter::setRootCommandList(const CommandList* root){
 	m_rootCommandList = root;
+	m_currentCommandList = root;
 }
 
 error_t Interpreter::readLine() {
@@ -42,7 +43,8 @@ error_t Interpreter::readLine() {
 	reorderTokens(numTokens);
     //traverse command structure recursively
 	std::strcpy(m_commandBuffer, "[root]");
-    return interpretCommandList(m_rootCommandList, m_tokens.data(), numTokens);
+	if(m_currentCommandList == nullptr) return error_t::ERROR;
+    return interpretCommandList(m_currentCommandList, m_tokens.data(), numTokens);
      
 }
 //-----------------------------------------------------------------------------
@@ -68,7 +70,7 @@ error_t Interpreter::interpretCommandList(const CommandList* list, Token* tokens
 		}
 		else {
 			//error if no default command
-			if(tokens == m_tokens.data()) Serial.println("<[Cmd:error] You must provide a command name");
+			if(tokens == m_tokens.data()) Serial.printf("<[Cmd:error] No default command exists for '%s' directory\n", m_currentCommandList->getName());
 			else Serial.printf("<[Cmd:error] Invalid number of arguments for '%s'. Expected at least one more argument\n", m_commandBuffer);
 			return error_t::GOOD;
 		}
@@ -94,12 +96,44 @@ error_t Interpreter::interpretCommandList(const CommandList* list, Token* tokens
 			Serial.println("<[Cmd:error] Command name is too long for interpretation\n");
 			return error_t::GOOD;
 		}
+		//check for special start commands 
+		if(numTokens == 1){
+			if(std::strcmp(m_commandBuffer, "rd") == 0){
+				m_currentCommandList = m_rootCommandList;
+				printEOC();
+				return error_t::GOOD;
+			}
+			if(std::strcmp(m_commandBuffer, "wd") == 0){
+				Serial.println(m_currentCommandList->getName());
+				printEOC();
+				return error_t::GOOD;
+			}
+		}
+		//check for command in command structure
 		command = list->getCommandWithName(m_commandBuffer);
 	}
 	if(command == nullptr){
 		//search for a sub-command if no commands match
 		const CommandList* child = list->getCommandListWithName(m_commandBuffer);
 		if(child == nullptr){
+			//check for special commands
+			if(numTokens == 1){
+				if(std::strcmp(m_commandBuffer, "ls") == 0){
+					list->printLocalCommands();
+					printEOC();
+					return error_t::GOOD;
+				}
+				if(std::strcmp(m_commandBuffer, "lsr") == 0){
+					list->printAllCommands();
+					printEOC();
+					return error_t::GOOD;
+				}
+				if(std::strcmp(m_commandBuffer, "cd") == 0){
+					m_currentCommandList = list;
+					printEOC();
+					return error_t::GOOD;
+				}
+			}
 			//check for default comands if no commands or subcommands match the word argument
 			command = list->getCommandWithName("");
 			//backtrack one token to account for empty command name and load correct command name
@@ -110,7 +144,7 @@ error_t Interpreter::interpretCommandList(const CommandList* list, Token* tokens
 			} 
 			else{
 				//error if no command match, commandList match or default command exists
-				Serial.printf("<[Cmd:error] Command '%s' is not available in this context\n", m_commandBuffer);
+				Serial.printf("<[Cmd:error] Command '%s' is not available in '%s' directory\n", m_commandBuffer, m_currentCommandList->getName());
 				return error_t::GOOD;
 			}
 		}

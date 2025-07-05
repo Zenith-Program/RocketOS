@@ -26,6 +26,7 @@ namespace RocketOS{
             static constexpr uint_t c_commandBufferSize = RocketOS_Shell_InterpreterCommandNameBufferSize;
             char m_commandBuffer[c_commandBufferSize];
             const CommandList* m_rootCommandList;
+            const CommandList* m_currentCommandList;
             const SerialInput& m_inputBuffer;
 		public:
             /*constructor & initialization

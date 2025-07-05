@@ -23,9 +23,6 @@ const char* CommandList::getName() const{
 }
 
 void CommandList::printLocalCommands() const{
-    Serial.print("##### ");
-    Serial.print(m_name);
-    Serial.println(" commands #####");
     for(uint_t i=0; i<m_numCommands; i++){
         //print each command except for the default command
         if(std::strcmp("", m_commands[i].name) != 0){

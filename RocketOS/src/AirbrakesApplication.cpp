@@ -12,7 +12,7 @@ using namespace RocketOS::Simulation;
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //sensors
     m_altimeter("altimeter", Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
-    m_IMU("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us, TeensyTimerTool::PIT),
+    m_IMU("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us),
     //control syatems
     m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
@@ -81,6 +81,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
 
 
 void Application::initialize(){
+    //=================
     error_t anyError = error_t::GOOD;
     error_t processError;
     m_inputBuffer.init();
@@ -116,10 +117,8 @@ void Application::initialize(){
     }
     else Serial.println("Initialized the altimeter");
     //init IMU
-    processError = m_IMU.initialize();
-    if(processError != error_t::GOOD){
-        if(processError == Sensors::BNO085_SPI::ERROR_ResetTimeout) Serial.println("Failed to detect the IMU");
-        if(processError == Sensors::BNO085_SPI::ERROR_ConfigurationTimeout) Serial.println("Failed to configure the IMU");
+    if(m_IMU.initialize() != error_t::GOOD){
+        Serial.println("Failed to detect the IMU");
         anyError = error_t::ERROR;
     }
     else Serial.println("Initialized the IMU");
@@ -145,7 +144,9 @@ void Application::updateBackground(){
         if(m_HILEnabled) m_TxHIL.sendUpdate();
         m_inputBuffer.update();
          while(m_inputBuffer.hasData()){
+            noInterrupts();
             m_interpreter.readLine();
+            interrupts();
             if(m_HILEnabled) m_RxHIL.readLine();
             m_inputBuffer.clear();
             m_inputBuffer.update();
@@ -157,4 +158,6 @@ void Application::updateBackground(){
         m_telemetry.logLine();
         m_telemetry.clearReady();
     }
+    //update IMU
+    m_IMU.updateBackground();
 }

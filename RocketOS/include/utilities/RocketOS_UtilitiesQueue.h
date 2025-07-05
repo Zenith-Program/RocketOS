@@ -40,6 +40,10 @@ namespace RocketOS{
             uint_t capacity() const{
                 return m_data.size();
             }
+
+            bool empty() const{
+                return size() == 0;
+            }
         };
     }
 }
