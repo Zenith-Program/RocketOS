@@ -18,7 +18,7 @@ using namespace Sensors;
 #define ISA_MOLAR_MASS_AIR 0.0289652    // Units: kg/mol
 #define ISA_IDEAL_GAS 8.31446           // Units: j/(mol*K)
 
-MS5607_SPI::MS5607_SPI(const char* name, float_t groundTemperature, float_t groundPressure, uint_t frequency, TeensyTimerTool::TimerGenerator* timer) : m_name(name), m_SPIFrequency(frequency), m_timer(timer), m_inAsyncUpdate(false), m_newData(false), m_groundLevelPressure_pa(groundPressure), m_groundLevelTemperature_k(groundTemperature) {}
+MS5607_SPI::MS5607_SPI(const char* name, float_t groundTemperature, float_t groundPressure, uint_t frequency, TeensyTimerTool::TimerGenerator* timer) : m_name(name), m_SPIFrequency(frequency), m_timer(timer), m_inAsyncUpdate(false), m_newData(false), m_groundLevelTemperature_k(groundTemperature), m_groundLevelPressure_pa(groundPressure) {}
 
 RocketOS::Shell::CommandList MS5607_SPI::getCommands(){
     return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootCommandList.data(), c_rootCommandList.size()};

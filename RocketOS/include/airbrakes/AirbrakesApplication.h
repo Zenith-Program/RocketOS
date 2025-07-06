@@ -8,15 +8,17 @@
 #include "AirbrakesObserver.h"
 #include "AirbrakesSensors_Altimeter.h"
 #include "AirbrakesSensors_IMU.h"
+#include "AirbrakesActuator.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 namespace Airbrakes{
 
     class Application{
     private:
-        // --- sensor readings ---
+        // --- peripheral hardware systems ---
         Sensors::MS5607_SPI m_altimeter;
         Sensors::BNO085_SPI m_IMU;
+        Motor::Actuator m_actuator;
         // --- control system ---
         Controls::Controller m_controller;
         Controls::FlightPlan m_flightPlan;
@@ -138,7 +140,7 @@ namespace Airbrakes{
                 };
             // =============================
             //list of subcommands
-            const std::array<CommandList, 8> c_rootChildren{
+            const std::array<CommandList, 9> c_rootChildren{
                 m_controller.getCommands(),
                 m_flightPlan.getCommands(),
                 m_log.getCommands(),
@@ -146,7 +148,8 @@ namespace Airbrakes{
                 m_persistent.getCommands(),
                 CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()},
                 m_altimeter.getCommands(),
-                m_IMU.getCommands()
+                m_IMU.getCommands(),
+                m_actuator.getCommands()
             };
             //list of local commands
             const std::array<Command, 4> c_rootCommands{

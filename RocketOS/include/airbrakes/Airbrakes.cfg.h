@@ -26,6 +26,6 @@
 
 #define Airbrakes_CFG_IMU_SPIFrequency 1000000
 #define Airbrakes_CFG_IMU_SamplePeriod_us 10000
-#define Airbrakes_CFG_IMUBufferSize 512
+#define Airbrakes_CFG_IMUBufferSize 64
 #define Airbrekes_CFG_IMUTxQueueSize 16
 #define Airbrakes_CFG_IMUTxCallbackCaptureSize 12
