@@ -141,11 +141,11 @@ void Actuator::applySteppingMode(SteppingModes mode){
 void Actuator::setDirectionPin(Directions dir) const{
     switch(dir){
         case Directions::Extend:
-            digitalWriteFast(DRIVER_PIN_DIR, LOW);
+            digitalWriteFast(DRIVER_PIN_DIR, HIGH);
         break;
         case Directions::Retract:
         default:
-            digitalWriteFast(DRIVER_PIN_DIR, HIGH);
+            digitalWriteFast(DRIVER_PIN_DIR, LOW);
         break;
     }
 }

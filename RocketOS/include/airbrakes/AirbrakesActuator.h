@@ -56,7 +56,7 @@ namespace Airbrakes{
 
             // === ROOT COMMAND LIST ===
                 //commands
-                const std::array<Command, 5> c_rootCommands{
+                const std::array<Command, 7> c_rootCommands{
                     Command{"position", "", [this](arg_t){
                         Serial.println(getCurrentDeployment());
                     }},
@@ -72,6 +72,19 @@ namespace Airbrakes{
                     }},
                     Command{"stop", "", [this](arg_t){
                         sleep();
+                    }},
+                    Command{"debug", "", [this](arg_t){
+                        Serial.print("period: ");
+                        Serial.println(m_stepPeriod_us);
+                        Serial.print("targetEP: ");
+                        Serial.println(m_targetEncoderPosition);
+                        Serial.print("maxEP: ");
+                        Serial.println(m_currentEncoderEndPosition);
+                        Serial.print("EP: ");
+                        Serial.println(abs(m_encoder.read()));
+                    }},
+                    Command{"speed", "f", [this](arg_t args){
+                        setSteppingSpeed(args[0].getFloatData());
                     }}
                 };
             // =========================
