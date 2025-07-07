@@ -130,6 +130,8 @@ void Application::initialize(){
         anyError = error_t::ERROR;
     }
     else Serial.println("Initialized the IMU");
+    //init motor
+    m_actuator.initialize();
     //start timers
     m_controller.resetInit();
     Serial.println("Initialized the controller");

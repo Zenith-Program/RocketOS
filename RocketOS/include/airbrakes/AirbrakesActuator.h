@@ -2,16 +2,51 @@
 #include "AirbrakesGeneral.h"
 #include "RocketOS.h"
 #include <Encoder.h>
+#include <IntervalTimer.h>
 
 namespace Airbrakes{
     namespace Motor{
+        enum class SteppingModes{
+            FullStep, HalfStep, QuarterStep, MicroStep
+        };
+
         class Actuator{
         private:
+            enum class Directions{
+                Extend, Retract
+            };
+
+        private:
+            static constexpr uint_t c_numFullStrokeSteps = Airbrakes_CFG_MotorFullStrokeNumSteps;
+            static constexpr uint_t c_numFullStrokeEncoderPositionns = Airbrakes_CFG_MotorFullStrokeNumEncoderPositions;
             const char* const m_name;
             Encoder m_encoder;
+            uint_t m_currentEncoderEndPosition;
+            bool m_active;
+            uint_t m_targetEncoderPosition;
+            SteppingModes m_mode;
+            uint_t m_stepPeriod_us;
+            IntervalTimer m_timer;
+
         public:
             Actuator(const char*);
+            void initialize();
+            void sleep();
+            void wake();
+            void setSteppingCharacteristics(float_t, SteppingModes);
+            void setSteppingSpeed(float_t);
+            void setSteppingMode(SteppingModes);
+            error_t setTargetDeployment(float_t);
+            float_t getCurrentDeployment();
             RocketOS::Shell::CommandList getCommands();
+
+        private:
+            void stepISR();
+            uint_t getStepPeriod_us(float_t, SteppingModes) const;
+            uint_t getEncoderPositionFromUnitDeployment(float_t) const;
+            float_t getUnitDeploymentFromEncoderPosition(uint_t) const;
+            void applySteppingMode(SteppingModes);
+            void setDirectionPin(Directions) const;
 
         private:
             // ######### command structure #########
@@ -21,12 +56,22 @@ namespace Airbrakes{
 
             // === ROOT COMMAND LIST ===
                 //commands
-                const std::array<Command, 2> c_rootCommands{
-                    Command{"read", "", [this](arg_t){
-                        Serial.println(m_encoder.read());
+                const std::array<Command, 5> c_rootCommands{
+                    Command{"position", "", [this](arg_t){
+                        Serial.println(getCurrentDeployment());
                     }},
                     Command{"zero", "", [this](arg_t){
                        m_encoder.write(0);
+                    }},
+                    Command{"target", "f", [this](arg_t args){
+                        if(setTargetDeployment(args[0].getFloatData()) != error_t::GOOD)
+                        Serial.println("Invalid position");
+                    }},
+                    Command{"start", "", [this](arg_t){
+                        wake();
+                    }},
+                    Command{"stop", "", [this](arg_t){
+                        sleep();
                     }}
                 };
             // =========================

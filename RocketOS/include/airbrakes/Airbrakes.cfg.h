@@ -29,3 +29,7 @@
 #define Airbrakes_CFG_IMUBufferSize 64
 #define Airbrekes_CFG_IMUTxQueueSize 16
 #define Airbrakes_CFG_IMUTxCallbackCaptureSize 12
+
+#define Airbrakes_CFG_MotorFullStrokeNumEncoderPositions 1500
+#define Airbrakes_CFG_MotorFullStrokeNumSteps 745
+#define Airbrakes_CFG_MotorDefaultSpeed 0.1
