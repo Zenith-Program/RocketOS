@@ -75,14 +75,9 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
-            float_t,    //drag area
-            float_t,    //flight path
-            float_t,    //error
-            float_t,    //update rule drag
-            float_t,    //adjusted drag
-            float_t,    //echo of altitude
-            float_t,    //echo of velocity
-            float_t     //echo of angle
+            int_t,  //encoder pos
+            int_t,  //error
+            int_t   //target
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
             float_t,    //altitude

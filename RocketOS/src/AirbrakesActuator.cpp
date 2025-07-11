@@ -15,7 +15,7 @@ using namespace Motor;
 #define DRIVER_PIN_STEP 17
 #define DRIVER_PIN_DIR 16
 
-#define MOTOR_ENCODER_TOLERANCE 10
+#define MOTOR_ENCODER_TOLERANCE 100
 
 Actuator::Actuator(const char* name) : m_name(name), m_encoder(ENCODER_PIN_A, ENCODER_PIN_B), m_currentEncoderEndPosition(Airbrakes_CFG_MotorFullStrokeNumEncoderPositions), m_active(false), m_targetEncoderPosition(0), m_mode(SteppingModes::FullStep), m_stepPeriod_us(getStepPeriod_us(Airbrakes_CFG_MotorDefaultSpeed, SteppingModes::FullStep)){}
 
@@ -44,7 +44,7 @@ void Actuator::initialize(){
     pinMode(DRIVER_PIN_STEP, OUTPUT);
     digitalWriteFast(DRIVER_PIN_STEP, LOW);
     pinMode(DRIVER_PIN_DIR, OUTPUT);
-    setDirectionPin(Directions::Retract);
+    setDirection(Directions::Retract);
 }
 
 void Actuator::sleep(){
@@ -99,10 +99,11 @@ float_t Actuator::getCurrentDeployment(){
 
 //helper functions
 void Actuator::stepISR(){
-    int_t positionalError = abs(m_encoder.read()) - m_targetEncoderPosition;
-    if(abs(positionalError) < MOTOR_ENCODER_TOLERANCE) return;
-    if(positionalError > 0) setDirectionPin(Directions::Retract);
-    else setDirectionPin(Directions::Extend);
+    m_currentEncoderPosition = m_encoder.read();
+    m_currentEncoderError = m_currentEncoderPosition - m_targetEncoderPosition;
+    if(abs(m_currentEncoderError) < MOTOR_ENCODER_TOLERANCE) return;
+    if(m_currentEncoderError > 0) setDirection(Directions::Extend);
+    else setDirection(Directions::Retract);
     digitalToggleFast(DRIVER_PIN_STEP);
 }
 
@@ -138,22 +139,35 @@ void Actuator::applySteppingMode(SteppingModes mode){
     }
 }
 
-void Actuator::setDirectionPin(Directions dir) const{
-    switch(dir){
-        case Directions::Extend:
-            digitalWriteFast(DRIVER_PIN_DIR, HIGH);
-        break;
-        case Directions::Retract:
-        default:
-            digitalWriteFast(DRIVER_PIN_DIR, LOW);
-        break;
+void Actuator::setDirection(Directions dir){
+    if(dir == Directions::Extend && m_currentDirection != Directions::Extend){
+        digitalWriteFast(DRIVER_PIN_DIR, HIGH);
+        m_currentDirection = Directions::Extend;
+        return;
+    }
+    if(dir == Directions::Retract && m_currentDirection != Directions::Retract){
+        digitalWriteFast(DRIVER_PIN_DIR, LOW);
+        m_currentDirection = Directions::Retract;
+        return;
     }
 }
 
-uint_t Actuator::getEncoderPositionFromUnitDeployment(float_t units) const{
-    return static_cast<uint_t>(units * m_currentEncoderEndPosition);
+int_t Actuator::getEncoderPositionFromUnitDeployment(float_t units) const{
+    return -static_cast<int_t>(units * m_currentEncoderEndPosition);
 }
 
-float_t Actuator::getUnitDeploymentFromEncoderPosition(uint_t encoderPos) const{
-    return static_cast<float_t>(encoderPos) / m_currentEncoderEndPosition;
+float_t Actuator::getUnitDeploymentFromEncoderPosition(int_t encoderPos) const{
+    return static_cast<float_t>(-encoderPos) / m_currentEncoderEndPosition;
+}
+
+//references
+const int_t& Actuator::getEncoderPosRef() const{
+    return m_currentEncoderPosition;
+}
+
+const int_t& Actuator::getTargetEncoderRef() const{
+    return m_targetEncoderPosition;
+}
+const int_t& Actuator::getErrorRef() const{
+    return m_currentEncoderError;
 }

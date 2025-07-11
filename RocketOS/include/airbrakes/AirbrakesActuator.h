@@ -23,10 +23,14 @@ namespace Airbrakes{
             Encoder m_encoder;
             uint_t m_currentEncoderEndPosition;
             bool m_active;
-            uint_t m_targetEncoderPosition;
+            int_t m_targetEncoderPosition;
             SteppingModes m_mode;
             uint_t m_stepPeriod_us;
             IntervalTimer m_timer;
+            Directions m_currentDirection;
+
+            int_t m_currentEncoderPosition;
+            int_t m_currentEncoderError;
 
         public:
             Actuator(const char*);
@@ -40,13 +44,18 @@ namespace Airbrakes{
             float_t getCurrentDeployment();
             RocketOS::Shell::CommandList getCommands();
 
+
+            const int_t& getEncoderPosRef() const;
+            const int_t& getTargetEncoderRef() const;
+            const int_t& getErrorRef() const;
+
         private:
             void stepISR();
             uint_t getStepPeriod_us(float_t, SteppingModes) const;
-            uint_t getEncoderPositionFromUnitDeployment(float_t) const;
-            float_t getUnitDeploymentFromEncoderPosition(uint_t) const;
+            int_t getEncoderPositionFromUnitDeployment(float_t) const;
+            float_t getUnitDeploymentFromEncoderPosition(int_t) const;
             void applySteppingMode(SteppingModes);
-            void setDirectionPin(Directions) const;
+            void setDirection(Directions);
 
         private:
             // ######### command structure #########
@@ -81,7 +90,7 @@ namespace Airbrakes{
                         Serial.print("maxEP: ");
                         Serial.println(m_currentEncoderEndPosition);
                         Serial.print("EP: ");
-                        Serial.println(abs(m_encoder.read()));
+                        Serial.println(m_encoder.read());
                     }},
                     Command{"speed", "f", [this](arg_t args){
                         setSteppingSpeed(args[0].getFloatData());
