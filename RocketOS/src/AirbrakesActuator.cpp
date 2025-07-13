@@ -101,10 +101,15 @@ float_t Actuator::getCurrentDeployment(){
 void Actuator::stepISR(){
     m_currentEncoderPosition = m_encoder.read();
     m_currentEncoderError = m_currentEncoderPosition - m_targetEncoderPosition;
-    if(abs(m_currentEncoderError) < MOTOR_ENCODER_TOLERANCE) return;
+    if(abs(m_currentEncoderError) < MOTOR_ENCODER_TOLERANCE){
+        digitalWriteFast(DRIVER_PIN_STEP, LOW);
+        return;
+    } 
     if(m_currentEncoderError > 0) setDirection(Directions::Extend);
     else setDirection(Directions::Retract);
-    digitalToggleFast(DRIVER_PIN_STEP);
+    digitalWriteFast(DRIVER_PIN_STEP, HIGH);
+    delayMicroseconds(5);
+    digitalWriteFast(DRIVER_PIN_STEP, LOW);
 }
 
 uint_t Actuator::getStepPeriod_us(float_t unitsPerSecond, SteppingModes mode) const{
@@ -141,13 +146,17 @@ void Actuator::applySteppingMode(SteppingModes mode){
 
 void Actuator::setDirection(Directions dir){
     if(dir == Directions::Extend && m_currentDirection != Directions::Extend){
-        digitalWriteFast(DRIVER_PIN_DIR, HIGH);
+        Serial.println("Extending"); //debug
+        digitalWriteFast(DRIVER_PIN_DIR, LOW);
         m_currentDirection = Directions::Extend;
+        delay(1);
         return;
     }
     if(dir == Directions::Retract && m_currentDirection != Directions::Retract){
-        digitalWriteFast(DRIVER_PIN_DIR, LOW);
+        Serial.println("Retracting"); //debug
+        digitalWriteFast(DRIVER_PIN_DIR, HIGH);
         m_currentDirection = Directions::Retract;
+        delay(1);
         return;
     }
 }
