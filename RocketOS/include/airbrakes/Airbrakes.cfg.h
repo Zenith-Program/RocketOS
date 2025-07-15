@@ -32,4 +32,4 @@
 
 #define Airbrakes_CFG_MotorFullStrokeNumEncoderPositions 15000
 #define Airbrakes_CFG_MotorFullStrokeNumSteps 745
-#define Airbrakes_CFG_MotorDefaultSpeed 0.1
+#define Airbrakes_CFG_MotorDefaultSpeed 1

@@ -13,16 +13,16 @@ using namespace Motor;
 #define DRIVER_PIN_I2 19
 #define DRIVER_PIN_SLP 18 //high is awake, low is sleep
 #define DRIVER_PIN_STEP 17
-#define DRIVER_PIN_DIR 16
+#define DRIVER_PIN_DIR 16 //low extends airbrakes, high retracts airbrakes
 
-#define MOTOR_ENCODER_TOLERANCE 100
+#define MOTOR_ENCODER_TOLERANCE 48
+#define MOTOR_DIR_LATCH_TIME_us 20
 
-Actuator::Actuator(const char* name) : m_name(name), m_encoder(ENCODER_PIN_A, ENCODER_PIN_B), m_currentEncoderEndPosition(Airbrakes_CFG_MotorFullStrokeNumEncoderPositions), m_active(false), m_targetEncoderPosition(0), m_mode(SteppingModes::FullStep), m_stepPeriod_us(getStepPeriod_us(Airbrakes_CFG_MotorDefaultSpeed, SteppingModes::FullStep)){}
+Actuator::Actuator(const char* name) : m_name(name), m_encoder(ENCODER_PIN_A, ENCODER_PIN_B), m_numLimitedEncoderPositions(Airbrakes_CFG_MotorFullStrokeNumEncoderPositions),m_numFullStrokeSteps(Airbrakes_CFG_MotorFullStrokeNumSteps), m_numFullStrokeEncoderPositionns(Airbrakes_CFG_MotorFullStrokeNumEncoderPositions), m_state(States::Sleep), m_targetEncoderPosition(0), m_mode(SteppingModes::FullStep), m_stepPeriod_us(getStepPeriod_us(Airbrakes_CFG_MotorDefaultSpeed, SteppingModes::FullStep)){}
 
 RocketOS::Shell::CommandList Actuator::getCommands(){
-    return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), nullptr, 0};
+    return CommandList{m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootCommandList.data(), c_rootCommandList.size()};
 }
-
 
 void Actuator::initialize(){
     //diable driver
@@ -48,13 +48,13 @@ void Actuator::initialize(){
 }
 
 void Actuator::sleep(){
-    m_active = false;
+    m_state = States::Sleep;
     m_timer.end();
     digitalWriteFast(DRIVER_PIN_EN, HIGH);
 }
 
 void Actuator::wake(){
-    m_active = true;
+    m_state = States::Active;
     m_timer.begin([this](){
         this->stepISR();
     }, m_stepPeriod_us);
@@ -62,10 +62,12 @@ void Actuator::wake(){
 }
 
 void Actuator::setSteppingCharacteristics(float_t units, SteppingModes mode){
+    if(m_state == States::Tare || m_state == States::Zero) return; //don't allow change of stepping type or speed durring calibrations
     m_mode = mode;
     applySteppingMode(mode);
+    //restart timer
     m_stepPeriod_us = getStepPeriod_us(units, mode);
-    if(m_active){
+    if(m_state == States::Active){
         m_timer.end();
         m_timer.begin([this](){
             this->stepISR();
@@ -74,8 +76,10 @@ void Actuator::setSteppingCharacteristics(float_t units, SteppingModes mode){
 }
 
 void Actuator::setSteppingSpeed(float_t units){
+    if(m_state == States::Tare || m_state == States::Zero) return; //don't allow change of speed durring calibrations
     m_stepPeriod_us = getStepPeriod_us(units, m_mode);
-    if(m_active){
+    //restart timer
+    if(m_state == States::Active){
         m_timer.end();
         m_timer.begin([this](){
             this->stepISR();
@@ -83,8 +87,22 @@ void Actuator::setSteppingSpeed(float_t units){
     }
 }
 
-void Actuator::setSteppingMode(SteppingModes mode){
-    //later
+void Actuator::setSteppingMode(SteppingModes newMode){
+    if(m_state == States::Tare || m_state == States::Zero) return; //don't allow change of stepping type durring calibrations
+    //compute step rate conversion to continue the same actuator speed
+    int_t power = getPeriodConversionPower(m_mode, newMode);
+    if(power >= 0) m_stepPeriod_us <<=  power;
+    else m_stepPeriod_us >>= -power;
+    //change stepping mode
+    m_mode = newMode;
+    applySteppingMode(m_mode);
+    //restart timer
+    if(m_state == States::Active){
+        m_timer.end();
+        m_timer.begin([this](){
+            this->stepISR();
+        }, m_stepPeriod_us);
+    }
 }
 
 error_t Actuator::setTargetDeployment(float_t units){
@@ -107,13 +125,11 @@ void Actuator::stepISR(){
     } 
     if(m_currentEncoderError > 0) setDirection(Directions::Extend);
     else setDirection(Directions::Retract);
-    digitalWriteFast(DRIVER_PIN_STEP, HIGH);
-    delayMicroseconds(5);
-    digitalWriteFast(DRIVER_PIN_STEP, LOW);
+    digitalToggleFast(DRIVER_PIN_STEP);
 }
 
 uint_t Actuator::getStepPeriod_us(float_t unitsPerSecond, SteppingModes mode) const{
-    float_t usPerStep = static_cast<float_t>(c_numFullStrokeEncoderPositionns) * 1000000 / (unitsPerSecond * c_numFullStrokeSteps * m_currentEncoderEndPosition);
+    float_t usPerStep = static_cast<float_t>(m_numFullStrokeEncoderPositionns) * 1000000 / (unitsPerSecond * m_numFullStrokeSteps * m_numLimitedEncoderPositions);
     uint_t steppingModeMultiplier = 1;
     if(mode == SteppingModes::MicroStep) steppingModeMultiplier <<= 3;
     if(mode == SteppingModes::QuarterStep) steppingModeMultiplier <<= 2;
@@ -146,27 +162,45 @@ void Actuator::applySteppingMode(SteppingModes mode){
 
 void Actuator::setDirection(Directions dir){
     if(dir == Directions::Extend && m_currentDirection != Directions::Extend){
-        Serial.println("Extending"); //debug
         digitalWriteFast(DRIVER_PIN_DIR, LOW);
         m_currentDirection = Directions::Extend;
-        delay(1);
+        delayMicroseconds(MOTOR_DIR_LATCH_TIME_us);
         return;
     }
     if(dir == Directions::Retract && m_currentDirection != Directions::Retract){
-        Serial.println("Retracting"); //debug
         digitalWriteFast(DRIVER_PIN_DIR, HIGH);
         m_currentDirection = Directions::Retract;
-        delay(1);
+        delayMicroseconds(MOTOR_DIR_LATCH_TIME_us);
         return;
     }
 }
 
 int_t Actuator::getEncoderPositionFromUnitDeployment(float_t units) const{
-    return -static_cast<int_t>(units * m_currentEncoderEndPosition);
+    return -static_cast<int_t>(units * m_numLimitedEncoderPositions);
 }
 
 float_t Actuator::getUnitDeploymentFromEncoderPosition(int_t encoderPos) const{
-    return static_cast<float_t>(-encoderPos) / m_currentEncoderEndPosition;
+    return static_cast<float_t>(-encoderPos) / m_numLimitedEncoderPositions;
+}
+
+int_t Actuator::getPeriodConversionPower(SteppingModes initialMode, SteppingModes newMode){
+    auto getOrder = [](SteppingModes mode){
+        switch(mode){
+            case SteppingModes::FullStep:
+            default:
+                return static_cast<int_t>(0);
+            case SteppingModes::HalfStep:
+                return static_cast<int_t>(1);
+            case SteppingModes::QuarterStep:
+                return static_cast<int_t>(2);
+            case SteppingModes::MicroStep:
+                return static_cast<int_t>(3);
+        }
+    };
+
+    int_t initialOrder = getOrder(initialMode);
+    int_t newOrder = getOrder(newMode);
+    return initialOrder - newOrder;
 }
 
 //references
