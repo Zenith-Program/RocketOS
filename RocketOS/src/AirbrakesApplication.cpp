@@ -58,7 +58,11 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<uint32_t>{m_IMU.getAccelerationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu acceleration sample period"},
         EEPROMSettings<uint32_t>{m_IMU.getAngularVelocitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu angular velocity sample period"},
         EEPROMSettings<uint32_t>{m_IMU.getOrientationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu oreintation sample period"},
-        EEPROMSettings<uint32_t>{m_IMU.getGravitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu gravity sample period"}
+        EEPROMSettings<uint32_t>{m_IMU.getGravitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu gravity sample period"},
+        EEPROMSettings<float_t>{m_actuator.getActuatorLimitRef(), Airbrakes_CFG_MotorDefaultLimit, "actuator range limit"},
+        EEPROMSettings<uint_t>{m_actuator.getEncoderStepsRef(), Airbrakes_CFG_MotorFullStrokeNumEncoderPositions, "actuator number of encoder positions"},
+        EEPROMSettings<uint_t>{m_actuator.getMotorStepsRef(), Airbrakes_CFG_MotorFullStrokeNumSteps, "actuator number of steps"},
+        EEPROMSettings<Motor::SteppingModes>{m_actuator.getSteppingModeRef(), Motor::SteppingModes::HalfStep, "actuator mode"}
     ),
 
     //serial systems
@@ -66,9 +70,14 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
 
     //simulation systems
     m_TxHIL(
-        m_actuator.getEncoderPosRef(),
-         m_actuator.getErrorRef(),
-         m_actuator.getTargetEncoderRef()
+        m_controller.getRequestedDragRef(),
+        m_controller.getFlightPathRef(),
+        m_controller.getErrorRef(),
+        m_controller.getUpdateRuleDragRef(),
+        m_controller.getAdjustedDragRef(),
+        m_observer.getAltitudeRef(),
+        m_observer.getVerticalVelocityRef(),
+        m_observer.getAngleRef()
     ),
     m_RxHIL(m_inputBuffer, 
         m_observer.getAltitudeRef(),

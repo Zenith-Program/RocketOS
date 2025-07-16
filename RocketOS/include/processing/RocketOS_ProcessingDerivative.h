@@ -21,10 +21,6 @@ namespace RocketOS{
                 return m_filter.output() / pow2(t_order);
             }
 
-            bool filled() const{
-                return m_filter.filled();
-            }
-
             void reset(){
                 m_filter.reset();
             }
@@ -33,6 +29,10 @@ namespace RocketOS{
                 auto arr = makeCoefficients();
                 for(uint_t i=0; i<arr.size(); i++)
                     Serial.println(arr[i]);
+            }
+
+            uint_t size() const{
+                return c_filterSize;
             }
 
         private:

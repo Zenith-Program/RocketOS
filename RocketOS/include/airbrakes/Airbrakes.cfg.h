@@ -33,3 +33,5 @@
 #define Airbrakes_CFG_MotorFullStrokeNumEncoderPositions 15000
 #define Airbrakes_CFG_MotorFullStrokeNumSteps 745
 #define Airbrakes_CFG_MotorDefaultSpeed 1
+#define Airbrakes_CFG_MotorDefaultLimit 1
+#define Airbrakes_CFG_MotorEncoderDifferentiatorOrder 6

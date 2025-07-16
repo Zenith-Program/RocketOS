@@ -29,8 +29,8 @@ namespace RocketOS{
             }
 
             float_t get(uint_t index) const{
-                if(m_filled) return m_data[(m_position + 1 + index) % currentSize()];
-                return m_data[index & currentSize()];
+                if(m_filled) return m_data[(m_position + currentSize() - 1 + index) % currentSize()];
+                return m_data[index % currentSize()];
             }
 
             constexpr uint_t maxSize() const{
@@ -83,7 +83,7 @@ namespace RocketOS{
             float_t output() const{
                 float_t value = 0;
                 for(uint_t i=0; i<m_coefficients.size(); i++)
-                    value += m_memory.get(i) * m_coefficients[i];
+                    value += m_memory.get(m_coefficients.size() - 1 - i) * m_coefficients[i];
                 return value;
             }
 

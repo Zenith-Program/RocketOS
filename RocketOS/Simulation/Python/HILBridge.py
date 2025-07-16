@@ -103,9 +103,11 @@ def serial_read_thread():
                         if len(nums) == TARGET_TO_SIM_COUNT:
                             target_to_simulink.put(nums)
                         else:
-                            print(f"[WARNING] Size mismatch in HIL packet from target: {stripedline}")
+                            print(f"[ERROR] Size mismatch in HIL packet from target: {stripedline}, expected {TARGET_TO_SIM_COUNT}, actual was {len(nums)}")
+                            stop_event.set()
                     except ValueError:
-                        print(f"[WARNING] Could not parse HIL packet from target: {stripedline}")
+                        print(f"[ERROR] Could not parse HIL packet from target: {stripedline}")
+                        stop_event.set()
                 else:
                     print(line)
         except Exception as e:
@@ -143,7 +145,8 @@ def simulink_receive_thread():
         try:
             data, _ = udp_recv_sock.recvfrom(8 * SIM_TO_TARGET_COUNT)
             if len(data) != 8 * SIM_TO_TARGET_COUNT:
-                print(f"[WARNING] Wrong data size from Simulink: {len(data)}")
+                print(f"[ERROR] Wrong data size from Simulink: {len(data)}, expected {SIM_TO_TARGET_COUNT}, actual was {len(data)/8}")
+                stop_event.set()
                 continue
             floats = struct.unpack(f'<{SIM_TO_TARGET_COUNT}d', data)
             simulink_to_target.put(floats)

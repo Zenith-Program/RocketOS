@@ -47,26 +47,30 @@ namespace Airbrakes{
 
         // --- non-volatile storage systems ---
         EEPROMWithCommands<
-            uint_t,         //controller update period
-            bool,           //controller enable
-            bool,           //telemetry override
-            bool,           //log override
-            FileName_t,     //log file name
-            FileName_t,     //telemetry file name
-            FileName_t,     //flight plan file name
-            uint_t,         //telemetry refresh period
-            bool,           //simulation mode enable
-            uint_t,         //simulation refresh period
-            float_t,        //controller decay rate
-            float_t,        //controller coast velocity
-            uint_t,         //altimeter SPI speed
-            float_t,        //altimeter ground pressure
-            float_t,        //altimeter ground temperature
-            uint_t,         //imu SPI speed
-            uint32_t,       //imu acceleration sample period
-            uint32_t,       //imu angular velocity sample period
-            uint32_t,       //imu orientation sample period
-            uint32_t        //imu gravity sample period
+            uint_t,             //controller update period
+            bool,               //controller enable
+            bool,               //telemetry override
+            bool,               //log override
+            FileName_t,         //log file name
+            FileName_t,         //telemetry file name
+            FileName_t,         //flight plan file name
+            uint_t,             //telemetry refresh period
+            bool,               //simulation mode enable
+            uint_t,             //simulation refresh period
+            float_t,            //controller decay rate
+            float_t,            //controller coast velocity
+            uint_t,             //altimeter SPI speed
+            float_t,            //altimeter ground pressure
+            float_t,            //altimeter ground temperature
+            uint_t,             //imu SPI speed
+            uint32_t,           //imu acceleration sample period
+            uint32_t,           //imu angular velocity sample period
+            uint32_t,           //imu orientation sample period
+            uint32_t,           //imu gravity sample period
+            float_t,            //motor range limit
+            uint_t,             //motor encoder steps
+            uint_t,             //motor steps
+            Motor::SteppingModes//motor stepping mode
         > m_persistent;
 
         // --- serial port systems ---
@@ -75,9 +79,14 @@ namespace Airbrakes{
 
         // --- HIL systems ---
         RocketOS::Simulation::TxHIL<
-            int_t,  //encoder pos
-            int_t,  //error
-            int_t   //target
+            float_t,
+            float_t,
+            float_t,
+            float_t,
+            float_t,
+            float_t,
+            float_t, 
+            float_t
         > m_TxHIL;
         RocketOS::Simulation::RxHIL<
             float_t,    //altitude
