@@ -55,7 +55,6 @@ namespace Airbrakes{
             error_t setActuatorLimit(float_t);
             float_t getCurrentDeployment();
             float_t getTarget() const;
-            float_t getSpeed() const;
             void beginTare();
             void beginZero();
             RocketOS::Shell::CommandList getCommands();
@@ -69,7 +68,6 @@ namespace Airbrakes{
         private:
             void stepISR();
             uint_t getStepPeriod_us(float_t, SteppingModes) const;
-            float_t getUnitSpeed(uint_t, SteppingModes) const;
             int_t getEncoderPositionFromUnitDeployment(float_t) const;
             float_t getUnitDeploymentFromEncoderPosition(int_t) const;
             void applySteppingMode(SteppingModes);
@@ -121,18 +119,6 @@ namespace Airbrakes{
                     };
                 // ===========================
 
-                // === SPEED COMMAND LIST ===
-                    //commands
-                    const std::array<Command, 2> c_speedCommands{
-                        Command{"", "", [this](arg_t){
-                            Serial.println(getSpeed());
-                        }},
-                        Command{"set", "f", [this](arg_t args){
-                            if(setSteppingSpeed(args[0].getFloatData()) != error_t::GOOD) Serial.println("Cannot chane speed right now");
-                        }}
-                    };
-                // ==========================
-
                 // === LIMIT COMMAND LIST ===
                     //commands
                     const std::array<Command, 2> c_limitCommands{
@@ -145,15 +131,14 @@ namespace Airbrakes{
                     };
                 // ==========================
                 //command list
-                const std::array<CommandList, 4> c_rootCommandList{
+                const std::array<CommandList, 3> c_rootCommandList{
                     CommandList{"target", c_targetCommands.data(), c_targetCommands.size(), nullptr, 0},
-                    CommandList{"speed", c_speedCommands.data(), c_speedCommands.size(), nullptr, 0},
                     CommandList{"limit", c_limitCommands.data(), c_limitCommands.size(), nullptr, 0},
                     CommandList{"mode", c_modeCommands.data(), c_modeCommands.size(), nullptr, 0}
                 };
 
                 //commands
-                const std::array<Command, 5> c_rootCommands{
+                const std::array<Command, 6> c_rootCommands{
                     Command{"position", "", [this](arg_t){
                         Serial.println(getCurrentDeployment());
                     }},
@@ -169,7 +154,9 @@ namespace Airbrakes{
                     Command{"tare", "", [this](arg_t){
                         beginTare();
                     }},
-
+                    Command{"speed", "f", [this](arg_t args){
+                        setSteppingSpeed(args[0].getFloatData());
+                    }}
                 };
             // =========================
         };

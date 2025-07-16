@@ -150,6 +150,8 @@ void Application::makeShutdownSafe(bool printErrors){
     //save telemetry and logs
     if(m_telemetry.flush() != error_t::GOOD && printErrors) Serial.println("Error flushing telemetry file");
     if(m_log.flush() != error_t::GOOD && printErrors) Serial.println("Error flushing log file");
+    //shutdown motor
+    m_actuator.sleep();
 }
 
 void Application::updateBackground(){

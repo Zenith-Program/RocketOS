@@ -131,10 +131,6 @@ float_t Actuator::getTarget() const{
     return getUnitDeploymentFromEncoderPosition(m_targetEncoderPosition);
 }
 
-float_t Actuator::getSpeed() const{
-    return getUnitSpeed(m_stepPeriod_us, m_mode);
-}
-
 //calibration
 void Actuator::beginTare(){
     //initialize calibration data
@@ -261,13 +257,6 @@ uint_t Actuator::getStepPeriod_us(float_t unitsPerSecond, SteppingModes mode) co
     uint_t steppingModeMultiplier = 1 << abs(getPeriodConversionPower(mode, SteppingModes::FullStep));
     uint_t halfPeriod_us = static_cast<uint_t>(usPerStep/(2*steppingModeMultiplier));
     return halfPeriod_us;
-}
-
-float_t Actuator::getUnitSpeed(uint_t halfPeriod_us, SteppingModes mode) const{
-    uint_t steppingModeMultiplier = 1 << abs(getPeriodConversionPower(mode, SteppingModes::FullStep));
-    uint_t usPerStep = halfPeriod_us*(2*steppingModeMultiplier);
-    float_t unitsPerSec = static_cast<float_t>(m_numFullStrokeEncoderPositions) * 1000000 / (usPerStep * m_numFullStrokeSteps * getNumLimitedEncoderPositions());
-    return unitsPerSec;
 }
 
 void Actuator::applySteppingMode(SteppingModes mode){
