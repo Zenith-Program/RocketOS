@@ -31,7 +31,7 @@ namespace RocketOS{
                     Serial.println(arr[i]);
             }
 
-            uint_t size() const{
+            constexpr uint_t size() const{
                 return c_filterSize;
             }
 

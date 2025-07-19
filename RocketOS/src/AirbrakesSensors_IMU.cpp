@@ -254,9 +254,23 @@ void BNO085_SPI::stopSensor(IMUData dataType){
     m_txQueue.push(makeFeatureResponseCallback(dataType));
 }
 
+void BNO085_SPI::stopAllSensors(){
+    stopSensor(IMUData::AngularVelocity);
+    stopSensor(IMUData::Gravity);
+    stopSensor(IMUData::Orientation);
+    stopSensor(IMUData::LinearAcceleration);
+}
+
 void BNO085_SPI::startSensor(IMUData dataType){
     m_txQueue.push(makeFeatureCallback(dataType, getSamplePeriod(dataType)));
     m_txQueue.push(makeFeatureResponseCallback(dataType));
+}
+
+void BNO085_SPI::startAllSensors(){
+    startSensor(IMUData::AngularVelocity);
+    startSensor(IMUData::Gravity);
+    startSensor(IMUData::Orientation);
+    startSensor(IMUData::LinearAcceleration);
 }
 
 void BNO085_SPI::tare(){

@@ -16,6 +16,10 @@ namespace Airbrakes{
             Disabled, Unreliable, LowAccuracy, ModerateAccuracy, HighAccuracy
         };
 
+        enum class IMUData{
+            Orientation, AngularVelocity, LinearAcceleration, Gravity
+        };
+
         struct Vector3{
             float_t x; 
             float_t y; 
@@ -38,10 +42,6 @@ namespace Airbrakes{
         class BNO085_SPI{
         private:
             //structures
-
-            enum class IMUData{
-                Orientation, AngularVelocity, LinearAcceleration, Gravity
-            };
 
             struct SHTPHeader{
                 uint16_t length;
@@ -93,7 +93,9 @@ namespace Airbrakes{
             void setSamplePeriod_us(uint32_t, IMUData);
             void setSamplePeriod_us(uint32_t);
             void stopSensor(IMUData);
+            void stopAllSensors();
             void startSensor(IMUData);
+            void startAllSensors();
             void tare();
 
             //references for persistent & telemetry

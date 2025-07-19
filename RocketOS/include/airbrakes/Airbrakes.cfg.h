@@ -35,3 +35,10 @@
 #define Airbrakes_CFG_MotorDefaultSpeed 1
 #define Airbrakes_CFG_MotorDefaultLimit 1
 #define Airbrakes_CFG_MotorEncoderDifferentiatorOrder 6
+
+#define Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us 25000
+#define Airbrakes_CFG_ObserverIMUMinSamplePeriod_us 2500
+#define Airbrakes_CFG_ObserverAltimeterSampePeriod_us Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us
+#define Airbrakes_CFG_ObserverIMUSamplePeriod 4*Airbrakes_CFG_ObserverIMUMinSamplePeriod_us
+#define Airbrakes_CFG_ObserverFilterOrderPer_us 8
+
