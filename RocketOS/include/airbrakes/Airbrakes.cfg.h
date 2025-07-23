@@ -40,5 +40,5 @@
 #define Airbrakes_CFG_ObserverIMUMinSamplePeriod_us 2500
 #define Airbrakes_CFG_ObserverAltimeterSampePeriod_us Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us
 #define Airbrakes_CFG_ObserverIMUSamplePeriod 4*Airbrakes_CFG_ObserverIMUMinSamplePeriod_us
-#define Airbrakes_CFG_ObserverFilterOrderPer_us 8
+#define Airbrakes_CFG_ObserverFilterDelay_us 250000
 
