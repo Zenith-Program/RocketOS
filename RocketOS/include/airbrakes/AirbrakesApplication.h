@@ -12,12 +12,13 @@
 #include <Arduino.h> //serial printing, elapsedmillis
 
 //#define NO_TX_HIL
-#define NO_RX_HIL
+//#define NO_RX_HIL
 
 namespace Airbrakes{
 
     class Application{
     private:
+        float_t m_test, m_test2; //debug
         // --- peripheral hardware systems ---
         Sensors::MS5607_SPI m_altimeter;
         Sensors::BNO085_SPI m_imu;
@@ -99,16 +100,20 @@ namespace Airbrakes{
         // --- HIL systems ---
 #ifndef NO_TX_HIL
         RocketOS::Simulation::TxHIL<
-            float_t,    //predicted altitude
-            float_t,    //predicted velocity
-            float_t,    //predicted acceleration
-            float_t    //predicted angle
+            float_t,    //drag area
+            float_t,    //flight plan
+            float_t,    //error
+            float_t,    //update rule drag
+            float_t,    //adjusted drag
+            float_t,    //altitude echo
+            float_t,    //vertical velocity echo
+            float_t     //angle echo
         > m_TxHIL;
 #endif
 #ifndef NO_RX_HIL
         RocketOS::Simulation::RxHIL<
             float_t,    //altitude
-            float_t,    //velocity
+            float_t,    //vertical velocity
             float_t     //angle
         > m_RxHIL;
 #endif

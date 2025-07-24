@@ -13,12 +13,12 @@ CONFIG_FILE = os.path.join(SCRIPT_DIR, CONFIG_FILE_NAME)
 
 # === DEFAULT CONFIG MAP ===
 default_config = {
-    "Target_COM_Port": 5,
+    "Target_COM_Port": 0,
     "Baud_Rate": 115200,
     "Bridge_UDP_Port": 25001,
     "Simulink_UDP_Port": 25000,
     "Values_Sent_Simulink_To_Target": 1,
-    "Values_Sent_Target_To_Simulink": 2
+    "Values_Sent_Target_To_Simulink": 1
 }
 
 # === PARSE CONFIG FILE OR CREATE DEFAULT ONE ===
@@ -60,9 +60,13 @@ SIM_TO_TARGET_COUNT = config["Values_Sent_Simulink_To_Target"]
 TARGET_TO_SIM_COUNT = config["Values_Sent_Target_To_Simulink"]             
 # ======================
 
-# === SHARED QUEUES ===
-target_to_simulink = queue.Queue()
-simulink_to_target = queue.Queue()
+# === SHARED VARIABLES ===
+target_to_simulink_lock = threading.Lock()
+target_to_simulink = None
+target_to_simulink_new = False
+simulink_to_target_lock = threading.Lock()
+simulink_to_target = None
+simulink_to_target_new = False
 user_commands = queue.Queue()
 
 # === EXIT EVENT ===
@@ -101,7 +105,11 @@ def serial_read_thread():
                     try:
                         nums = list(map(float, stripedline[1:].strip().split()))
                         if len(nums) == TARGET_TO_SIM_COUNT:
-                            target_to_simulink.put(nums)
+                            with target_to_simulink_lock:
+                                global target_to_simulink
+                                global target_to_simulink_new
+                                target_to_simulink = nums
+                                target_to_simulink_new = True
                         else:
                             print(f"[ERROR] Size mismatch in HIL packet from target: {stripedline}, expected {TARGET_TO_SIM_COUNT}, actual was {len(nums)}")
                             stop_event.set()
@@ -119,12 +127,15 @@ def serial_write_thread():
     while not stop_event.is_set():
         try:
             # Send HIL data to target if available
-            try:
-                hil_packet = simulink_to_target.get_nowait()
+            with simulink_to_target_lock:
+                global simulink_to_target_new
+                global simulink_to_target
+                hil_packet = simulink_to_target
+                newData = simulink_to_target_new
+                simulink_to_target_new = False
+            if(hil_packet and newData):
                 msg = '#' + ' '.join(f'{x:.10g}' for x in hil_packet) + '\r'
                 ser.write(msg.encode('utf-8'))
-            except queue.Empty:
-                pass
 
             # Send user commands to target
             try:
@@ -142,8 +153,6 @@ def serial_write_thread():
 def simulink_receive_thread():
     # Receives UDP packets from Simulink and pushes to Target
     while not stop_event.is_set():
-        if(SIM_TO_TARGET_COUNT == 0):
-            continue
         try:
             data, _ = udp_recv_sock.recvfrom(8 * SIM_TO_TARGET_COUNT)
             if len(data) != 8 * SIM_TO_TARGET_COUNT:
@@ -151,7 +160,11 @@ def simulink_receive_thread():
                 stop_event.set()
                 continue
             floats = struct.unpack(f'<{SIM_TO_TARGET_COUNT}d', data)
-            simulink_to_target.put(floats)
+            with simulink_to_target_lock:
+                global simulink_to_target
+                global simulink_to_target_new
+                simulink_to_target = floats
+                simulink_to_target_new = True
         except socket.timeout:
             continue
         except Exception as e:
@@ -163,9 +176,16 @@ def simulink_send_thread():
     # Sends latest HIL data to Simulink
     while not stop_event.is_set():
         try:
-            data = target_to_simulink.get(timeout=0.1)
-            payload = struct.pack(f'<{TARGET_TO_SIM_COUNT}d', *data)
-            udp_send_sock.sendto(payload, (SIMULINK_IP, SIMULINK_PORT))
+            with target_to_simulink_lock:
+                global target_to_simulink_new
+                global target_to_simulink
+                data = target_to_simulink
+                newData = target_to_simulink_new
+                target_to_simulink = None
+                target_to_simulink_new = False
+            if(data and newData):
+                payload = struct.pack(f'<{TARGET_TO_SIM_COUNT}d', *data)
+                udp_send_sock.sendto(payload, (SIMULINK_IP, SIMULINK_PORT))
         except queue.Empty:
             continue
         except Exception as e:
@@ -178,7 +198,8 @@ def user_input_thread():
     while not stop_event.is_set():
         try:
             cmd = input()
-            if(cmd.strip() == "quit" or cmd.strip() == "exit"):
+            cmd = cmd.strip()
+            if(cmd == "quit" or cmd == "exit"):
                 stop_event.set()
             else:
                 user_commands.put(cmd)
