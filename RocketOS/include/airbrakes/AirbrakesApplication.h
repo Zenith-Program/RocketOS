@@ -9,6 +9,7 @@
 #include "AirbrakesSensors_Altimeter.h"
 #include "AirbrakesSensors_IMU.h"
 #include "AirbrakesActuator.h"
+#include "AirbrakesDetectionParameters.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
 //#define NO_TX_HIL
@@ -18,7 +19,16 @@ namespace Airbrakes{
 
     class Application{
     private:
-        float_t m_test, m_test2; //debug
+        enum class ProgramStates{
+            Standby, Armed, Boost, Coast, PostApogee
+        };
+    private:
+        // --- program logic systems ---
+        ProgramStates m_state;
+        uint_t m_stateTransitionCounter;
+        elapsedMillis m_stateTransitionTimer, m_stateTransitionSampleTimer;
+        uint_t m_stateTransitionSamplePeriod;
+        EventDetection m_launchDetectionParameters, m_coastDetectionParameters, m_apogeeDetectionParameters;
         // --- peripheral hardware systems ---
         Sensors::MS5607_SPI m_altimeter;
         Sensors::BNO085_SPI m_imu;
@@ -67,30 +77,33 @@ namespace Airbrakes{
 
         // --- non-volatile storage systems ---
         EEPROMWithCommands<
-            uint_t,             //controller update period
-            bool,               //controller enable
-            bool,               //telemetry override
-            bool,               //log override
-            FileName_t,         //log file name
-            FileName_t,         //telemetry file name
-            FileName_t,         //flight plan file name
-            uint_t,             //telemetry refresh period
-            bool,               //simulation mode enable
-            uint_t,             //simulation refresh period
-            float_t,            //controller decay rate
-            float_t,            //controller coast velocity
-            uint_t,             //altimeter SPI speed
-            float_t,            //altimeter ground pressure
-            float_t,            //altimeter ground temperature
-            uint_t,             //imu SPI speed
-            uint32_t,           //imu acceleration sample period
-            uint32_t,           //imu angular velocity sample period
-            uint32_t,           //imu orientation sample period
-            uint32_t,           //imu gravity sample period
-            float_t,            //motor range limit
-            uint_t,             //motor encoder steps
-            uint_t,             //motor steps
-            Motor::SteppingModes//motor stepping mode
+            uint_t,                             //controller update period
+            bool,                               //controller enable
+            bool,                               //telemetry override
+            bool,                               //log override
+            FileName_t,                         //log file name
+            FileName_t,                         //telemetry file name
+            FileName_t,                         //flight plan file name
+            uint_t,                             //telemetry refresh period
+            bool,                               //simulation mode enable
+            uint_t,                             //simulation refresh period
+            float_t,                            //controller decay rate
+            float_t,                            //controller coast velocity
+            uint_t,                             //altimeter SPI speed
+            float_t,                            //altimeter ground pressure
+            float_t,                            //altimeter ground temperature
+            uint_t,                             //imu SPI speed
+            uint32_t,                           //imu acceleration sample period
+            uint32_t,                           //imu angular velocity sample period
+            uint32_t,                           //imu orientation sample period
+            uint32_t,                           //imu gravity sample period
+            float_t,                            //motor range limit
+            uint_t,                             //motor encoder steps
+            uint_t,                             //motor steps
+            Motor::SteppingModes,               //motor stepping mode
+            EventDetection::DetectionData,
+            EventDetection::DetectionData,
+            EventDetection::DetectionData
         > m_persistent;
 
         // --- serial port systems ---
@@ -128,6 +141,20 @@ namespace Airbrakes{
         void initialize();
         void makeShutdownSafe(bool printErrors=true);
         void updateBackground(); 
+
+    private:
+        void standbyTasks();
+        void armedTasks();
+        void boostTasks();
+        void coastTasks();
+        void postApogeeTasks();
+
+        void gotoState(ProgramStates);
+        void initStandby();
+        void initArmed();
+        void initBoost();
+        void initCoast();
+        void initPostApogee();
 
     private:
         // ######### command structure #########
@@ -173,8 +200,17 @@ namespace Airbrakes{
                     }}
                 };
             // =============================
+
+            // === DETECTION SUBCOMMAND ===
+                //list of subcommands
+                const std::array<CommandList, 3> c_detectionSubCommands{
+                    m_launchDetectionParameters.getCommands(), 
+                    m_coastDetectionParameters.getCommands(), 
+                    m_apogeeDetectionParameters.getCommands()
+                };
+            // ============================
             //list of subcommands
-            const std::array<CommandList, 9> c_rootChildren{
+            const std::array<CommandList, 10> c_rootChildren{
                 m_controller.getCommands(),
                 m_flightPlan.getCommands(),
                 m_log.getCommands(),
@@ -183,7 +219,8 @@ namespace Airbrakes{
                 CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()},
                 m_altimeter.getCommands(),
                 m_imu.getCommands(),
-                m_actuator.getCommands()
+                m_actuator.getCommands(),
+                CommandList{"detection", nullptr, 0, c_detectionSubCommands.data(), c_detectionSubCommands.size()}
             };
             //list of local commands
             const std::array<Command, 4> c_rootCommands{

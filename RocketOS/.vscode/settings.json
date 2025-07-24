@@ -2,6 +2,7 @@
     "files.associations": {
         "limits": "cpp",
         "functional": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "array": "cpp"
     }
 }

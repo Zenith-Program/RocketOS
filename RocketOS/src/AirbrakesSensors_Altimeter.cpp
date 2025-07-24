@@ -64,10 +64,6 @@ error_t MS5607_SPI::updateBlocking(){
         m_state = AltimeterStates::Standby;
         return error_t::GOOD;
     }
-    /*
-    elapsedMillis timer = 0;
-    while(m_state != AltimeterStates::Standby && timer < BLOCKING_TIMEOUT_ms);
-    */
     return error_t::GOOD;
 }
 

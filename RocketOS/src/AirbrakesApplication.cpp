@@ -10,6 +10,11 @@ using namespace RocketOS::Simulation;
 
 
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
+    //program logic
+    m_state(ProgramStates::Standby),
+    m_launchDetectionParameters("launch", Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms),
+    m_coastDetectionParameters("coast", Airbrakes_CFG_CoastMinimumVelocity_mPerS, Airbrakes_CFG_CoastMaximumAcceleration_mPerS2, Airbrakes_CFG_CoastMinimumSamples, Airbrakes_CFG_CoastMinimumTime_ms),
+    m_apogeeDetectionParameters("apogee", Airbrakes_CFG_ApogeeMaximumVelocity_mPerS, Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2, Airbrakes_CFG_ApogeeMinimumSamples, Airbrakes_CFG_ApogeeMinimumTime_ms),
     //peripherals
     m_altimeter("altimeter", Airbrakes_CFG_AltimeterNominalGroundTemperature, Airbrakes_CFG_AltimeterNominalGroundPressure, Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
     m_imu("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us),
@@ -80,7 +85,10 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<float_t>{m_actuator.getActuatorLimitRef(), Airbrakes_CFG_MotorDefaultLimit, "actuator range limit"},
         EEPROMSettings<uint_t>{m_actuator.getEncoderStepsRef(), Airbrakes_CFG_MotorFullStrokeNumEncoderPositions, "actuator number of encoder positions"},
         EEPROMSettings<uint_t>{m_actuator.getMotorStepsRef(), Airbrakes_CFG_MotorFullStrokeNumSteps, "actuator number of steps"},
-        EEPROMSettings<Motor::SteppingModes>{m_actuator.getSteppingModeRef(), Motor::SteppingModes::HalfStep, "actuator mode"}
+        EEPROMSettings<Motor::SteppingModes>{m_actuator.getSteppingModeRef(), Motor::SteppingModes::HalfStep, "actuator mode"},
+        EEPROMSettings<EventDetection::DetectionData>{m_launchDetectionParameters.getDataRef(), {Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms}, "launch detection parameters"},
+        EEPROMSettings<EventDetection::DetectionData>{m_coastDetectionParameters.getDataRef(), {Airbrakes_CFG_CoastMinimumVelocity_mPerS, Airbrakes_CFG_CoastMaximumAcceleration_mPerS2, Airbrakes_CFG_CoastMinimumSamples, Airbrakes_CFG_CoastMinimumTime_ms}, "coast detection parameters"},
+        EEPROMSettings<EventDetection::DetectionData>{m_apogeeDetectionParameters.getDataRef(), {Airbrakes_CFG_ApogeeMaximumVelocity_mPerS, Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2, Airbrakes_CFG_ApogeeMinimumSamples, Airbrakes_CFG_ApogeeMinimumTime_ms}, "apogee detection parameters"}
     ),
 
     //serial systems
@@ -199,11 +207,108 @@ void Application::updateBackground(){
          }
          m_serialRefresh = 0;
     }
-    //make telemetry log
-    if(m_controller.isActive() && m_telemetry.ready()){
+    //update IMU
+    m_imu.updateBackground();
+    //do tasks for the current state
+    switch(m_state){
+        case ProgramStates::Standby:
+        default:
+            standbyTasks();
+        break;
+        case ProgramStates::Armed:
+            armedTasks();
+        break;
+        case ProgramStates::Boost:
+            boostTasks();
+        break;
+        case ProgramStates::Coast:
+            coastTasks();
+        break;
+        case ProgramStates::PostApogee:
+            postApogeeTasks();
+        break;
+    }
+}
+
+//state tasks
+void Application::standbyTasks(){
+
+}
+
+void Application::armedTasks(){
+    //log telemetry
+    if(m_telemetry.ready()){
         m_telemetry.logLine();
         m_telemetry.clearReady();
     }
-    //update IMU
-    m_imu.updateBackground();
+    //check for state transition
+    if(m_stateTransitionSampleTimer >= m_stateTransitionSamplePeriod){
+        if(m_observer.getVeritcalVelocity() > m_launchDetectionParameters.getVerticalVelocityThreshold() && m_observer.getVerticalAcceleration() > m_launchDetectionParameters.getVerticalAccelerationThreshold() && m_stateTransitionTimer > m_launchDetectionParameters.getTimeThreshold()){
+            m_stateTransitionCounter++;
+            if(m_stateTransitionCounter >= m_launchDetectionParameters.getConsecutiveSamplesThreshold()) gotoState(ProgramStates::Boost);
+        }
+        else m_stateTransitionCounter = 0;
+    }
+}
+
+void Application::boostTasks(){
+
+}
+
+void Application::coastTasks(){
+
+}
+
+void Application::postApogeeTasks(){
+
+}
+
+//state transitions
+void Application::gotoState(ProgramStates newState){
+    switch(newState){
+        case ProgramStates::Standby:
+        default:
+            initStandby();
+            m_state = ProgramStates::Standby;
+        break;
+        case ProgramStates::Armed:
+            initArmed();
+            m_state = ProgramStates::Armed;
+        break;
+        case ProgramStates::Boost:
+            initBoost();
+            m_state = ProgramStates::Boost;
+        break;
+        case ProgramStates::Coast:
+            initCoast();
+            m_state = ProgramStates::Coast;
+        break;
+        case ProgramStates::PostApogee:
+            initPostApogee();
+            m_state = ProgramStates::PostApogee;
+        break;
+    }
+}
+
+void Application::initStandby(){
+    m_controller.stop();
+    m_actuator.sleep();
+}
+
+void Application::initArmed(){
+
+}
+
+void Application::initBoost(){
+
+}
+
+void Application::initCoast(){
+
+}
+
+void Application::initPostApogee(){
+    m_controller.stop();
+    m_actuator.setTargetDeployment(0);
+
 }

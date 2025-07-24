@@ -17,7 +17,7 @@ namespace Airbrakes{
         static constexpr error_t ERROR_AltimeterInitialization = error_t(2);
         static constexpr error_t ERROR_IMUInitialization = error_t(3);
     private:
-        static constexpr uint_t c_SamplePeriod_us = (Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us > Airbrakes_CFG_ObserverIMUMinSamplePeriod_us)? Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us : Airbrakes_CFG_ObserverIMUMinSamplePeriod_us;
+        static constexpr uint_t c_SamplePeriod_us = (Airbrakes_CFG_ObserverAltimeterSamplePeriod_us > Airbrakes_CFG_ObserverIMUSamplePeriod_us)? Airbrakes_CFG_ObserverAltimeterSamplePeriod_us : Airbrakes_CFG_ObserverIMUSamplePeriod_us;
         static constexpr uint_t c_FilterOrder = 2 * Airbrakes_CFG_ObserverFilterDelay_us / c_SamplePeriod_us;
         //state
         ObserverModes m_mode;
