@@ -6,6 +6,10 @@
 namespace Airbrakes{
     namespace Sensors{
         class MS5607_SPI{
+        private:
+            enum class AltimeterStates{
+                Standby, Blocking, Async
+            };
         public:
             static constexpr error_t ERROR_NotInitialized = error_t(2);
             static constexpr error_t ERROR_NotResponsive = error_t(3);
@@ -17,7 +21,7 @@ namespace Airbrakes{
             uint32_t m_pressureADC;
             uint_t m_SPIFrequency;
             TeensyTimerTool::OneShotTimer m_timer;
-            bool m_inAsyncUpdate;
+            AltimeterStates m_state;
             bool m_newData;
             float_t m_pressure_pa;
             float_t m_temperature_k;
