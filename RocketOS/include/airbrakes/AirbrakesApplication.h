@@ -12,7 +12,7 @@
 #include <Arduino.h> //serial printing, elapsedmillis
 
 //#define NO_TX_HIL
-//#define NO_RX_HIL
+#define NO_RX_HIL
 
 namespace Airbrakes{
 
@@ -100,14 +100,13 @@ namespace Airbrakes{
         // --- HIL systems ---
 #ifndef NO_TX_HIL
         RocketOS::Simulation::TxHIL<
-            float_t,    //drag area
-            float_t,    //flight plan
-            float_t,    //error
-            float_t,    //update rule drag
-            float_t,    //adjusted drag
-            float_t,    //altitude echo
-            float_t,    //vertical velocity echo
-            float_t     //angle echo
+            float_t,    //predicted altitude
+            float_t,    //predicted vertical velocity
+            float_t,    //predicted vertical acceleration
+            float_t,    //predicted angle
+            float_t,    //meaaured pressure
+            float_t,    //measured temperature
+            float_t     //measured altitude
         > m_TxHIL;
 #endif
 #ifndef NO_RX_HIL

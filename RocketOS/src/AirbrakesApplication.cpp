@@ -18,7 +18,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
     m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
     m_observer(m_imu, m_altimeter),
-    m_simulationType(ObserverModes::FullSimulation),
+    m_simulationType(ObserverModes::Sensor),
     //telemetry systems
     m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
         DataLogSettings<float_t>{m_observer.getPredictedAltitudeRef(), "Predicted Altitude"}, 
@@ -89,14 +89,13 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
     //simulation systems
 #ifndef NO_TX_HIL
     m_TxHIL(
-        m_controller.getRequestedDragRef(),
-        m_controller.getFlightPathRef(),
-        m_controller.getErrorRef(),
-        m_controller.getUpdateRuleDragRef(),
-        m_controller.getAdjustedDragRef(),
         m_observer.getPredictedAltitudeRef(),
         m_observer.getPredictedVerticalVelocityRef(),
-        m_observer.getPredictedAngleRef()
+        m_observer.getPredictedVerticalAccelerationRef(),
+        m_observer.getPredictedAngleRef(),
+        m_observer.getMeasuredPressureRef(),
+        m_observer.getMeasuredTemperatureRef(),
+        m_observer.getMeasuredAltitudeRef()
     ),
 #endif
 #ifndef NO_RX_HIL

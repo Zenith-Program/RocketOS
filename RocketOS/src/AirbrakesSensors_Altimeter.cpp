@@ -214,13 +214,13 @@ void MS5607_SPI::asyncStep2(){
 void MS5607_SPI::updateOutputValues(){
     if(m_newData){
         //compute temperature and pressure from ADC readings (MS5607 data sheet)
-        int32_t dT = static_cast<int32_t>(m_temperatureADC) - static_cast<int32_t>(m_calibrationCoeffieicents[5] << 8);
-        int32_t TEMP = 29315 + ((dT*m_calibrationCoeffieicents[6]) >> 23);
-        int64_t OFF = (static_cast<int64_t>(m_calibrationCoeffieicents[2]) << 17) + ((static_cast<int64_t>(m_calibrationCoeffieicents[4]) * dT) >> 6);
-        int64_t SENS = (static_cast<int64_t>(m_calibrationCoeffieicents[1]) << 16) + ((static_cast<int64_t>(m_calibrationCoeffieicents[3]) * dT) >> 7);
-        int32_t P = static_cast<int32_t>((m_pressureADC * (SENS >> 21) - OFF) >> 15);
-        m_temperature_k = static_cast<float_t>(TEMP) / 100;
-        m_pressure_pa = static_cast<float_t>(P);
+        float_t dT = static_cast<float_t>(m_temperatureADC) - (static_cast<float_t>(m_calibrationCoeffieicents[5]) * static_cast<float_t>(1 << 8));
+        float_t TEMP = 29315 + ((dT*static_cast<float_t>(m_calibrationCoeffieicents[6])) / static_cast<float_t>(1 << 23));
+        float_t OFF = (static_cast<float_t>(m_calibrationCoeffieicents[2]) * static_cast<float_t>(1 << 17)) + ((static_cast<float_t>(m_calibrationCoeffieicents[4]) * dT)  / static_cast<float_t>(1 << 6));
+        float_t SENS = (static_cast<float_t>(m_calibrationCoeffieicents[1]) * static_cast<float_t>(1 << 16)) + ((static_cast<float_t>(m_calibrationCoeffieicents[3]) * dT)  / static_cast<float_t>(1 << 7));
+        float_t P = static_cast<float_t>((m_pressureADC * (SENS / static_cast<float_t>(1 << 21)) - OFF) / static_cast<float_t>(1 << 15));
+        m_temperature_k = TEMP / 100;
+        m_pressure_pa = P;
         //compute altitude from ISA model
         m_altitude_m = m_groundLevelTemperature_k / ISA_LAPSE_RATE * (1-pow(m_groundLevelPressure_pa/m_pressure_pa, ISA_IDEAL_GAS * ISA_LAPSE_RATE / (ISA_GRAVITY * ISA_MOLAR_MASS_AIR)));
     }
