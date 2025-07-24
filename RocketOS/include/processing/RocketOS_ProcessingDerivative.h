@@ -102,14 +102,6 @@ namespace RocketOS{
             static constexpr float_t binomial(uint_t n, uint_t k){
                 if (k > n) return 0;
                 if (k == 0 || k == n) return 1;
-                //let compiler use larger floating point numbers
-                if constexpr{
-                    double res = 1;
-                    for (uint_t i = 1; i <= k; ++i) {
-                        res = res * (n - i + 1) / i;
-                    } 
-                    return res;
-                }
                 //use word length floating point numbers for run time
                 float_t res = 1;
                 for (uint_t i = 1; i <= k; ++i) {

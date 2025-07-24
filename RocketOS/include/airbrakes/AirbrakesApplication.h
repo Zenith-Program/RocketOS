@@ -11,27 +11,46 @@
 #include "AirbrakesActuator.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
+//#define NO_TX_HIL
+#define NO_RX_HIL
+
 namespace Airbrakes{
 
     class Application{
     private:
         // --- peripheral hardware systems ---
         Sensors::MS5607_SPI m_altimeter;
-        Sensors::BNO085_SPI m_IMU;
+        Sensors::BNO085_SPI m_imu;
         Motor::Actuator m_actuator;
         // --- control system ---
         Controls::Controller m_controller;
         Controls::FlightPlan m_flightPlan;
         Observer m_observer;
-
+        const ObserverModes m_simulationType;
         // --- sd card systems ---
         SdFat m_sdCard;
         DataLogWithCommands<
-            float_t,    //observed altitude
-            float_t,    //observed velocity x
-            float_t,    //observed velocity y
-            float_t,    //observed angle
-            float_t,    //observed angular velocity
+            float_t,    //predicted altitude
+            float_t,    //predicted vertical velocity
+            float_t,    //predicted vertical acceleration
+            float_t,    //predicted angle to horizontal
+            float_t,    //measured altitude
+            float_t,    //measured pressure
+            float_t,    //measured temperature
+            float_t,    //measured acceleration x
+            float_t,    //measured acceleration y
+            float_t,    //measured acceleration z
+            float_t,    //measured rotation x
+            float_t,    //measured rotation y
+            float_t,    //measured rotation z
+            float_t,    //measured gravity x
+            float_t,    //measured gravity y
+            float_t,    //measured gravity z
+            float_t,    //measured orientation r
+            float_t,    //measured orientation i
+            float_t,    //measured orientation j
+            float_t,    //measured orientation k
+            float_t,    //measured angle to horizontal
             float_t,    //controller error
             float_t,    //controller flight path
             float_t,    //controller flight path velocity partial
@@ -78,21 +97,21 @@ namespace Airbrakes{
         elapsedMillis m_serialRefresh;
 
         // --- HIL systems ---
+#ifndef NO_TX_HIL
         RocketOS::Simulation::TxHIL<
-            float_t,
-            float_t,
-            float_t,
-            float_t,
-            float_t,
-            float_t,
-            float_t, 
-            float_t
+            float_t,    //predicted altitude
+            float_t,    //predicted velocity
+            float_t,    //predicted acceleration
+            float_t    //predicted angle
         > m_TxHIL;
+#endif
+#ifndef NO_RX_HIL
         RocketOS::Simulation::RxHIL<
             float_t,    //altitude
             float_t,    //velocity
             float_t     //angle
         > m_RxHIL;
+#endif
         uint_t m_HILRefreshPeriod;
         bool m_HILEnabled;
 
@@ -132,9 +151,16 @@ namespace Airbrakes{
                 //list of local commands
                 const std::array<Command, 3> c_simCommands{
                     Command{"start", "", [this](arg_t){
+                        if(m_observer.setMode(m_simulationType) == error_t::ERROR){
+                            Serial.println("Failed to start simulation");
+                            return;
+                        }
                         m_HILEnabled = true;
                     }},
                     Command{"stop", "", [this](arg_t){
+                        if(m_observer.setMode(ObserverModes::Sensor) == error_t::ERROR){
+                            Serial.println("Error stopping simulation");
+                        }
                         m_HILEnabled = false;
                     }},
                     Command{"", "", [this](arg_t){
@@ -152,7 +178,7 @@ namespace Airbrakes{
                 m_persistent.getCommands(),
                 CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()},
                 m_altimeter.getCommands(),
-                m_IMU.getCommands(),
+                m_imu.getCommands(),
                 m_actuator.getCommands()
             };
             //list of local commands

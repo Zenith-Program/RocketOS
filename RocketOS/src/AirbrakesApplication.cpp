@@ -12,18 +12,36 @@ using namespace RocketOS::Simulation;
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //peripherals
     m_altimeter("altimeter", Airbrakes_CFG_AltimeterNominalGroundTemperature, Airbrakes_CFG_AltimeterNominalGroundPressure, Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
-    m_IMU("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us),
+    m_imu("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us),
     m_actuator("motor"),
     //control syatems
     m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
+    m_observer(m_imu, m_altimeter),
+    m_simulationType(ObserverModes::Sensor),
     //telemetry systems
     m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
-        DataLogSettings<float_t>{m_observer.getAltitudeRef(), "predicted altitude"}, 
-        DataLogSettings<float_t>{m_observer.getHorizontalVelocityRef(), "predicted x velocity"},
-        DataLogSettings<float_t>{m_observer.getVerticalVelocityRef(), "predicted y velocity"},
-        DataLogSettings<float_t>{m_observer.getAngleRef(), "predicted angle"},
-        DataLogSettings<float_t>{m_observer.getAngularVelocityRef(), "predicted angular velocity"},
+        DataLogSettings<float_t>{m_observer.getPredictedAltitudeRef(), "Predicted Altitude"}, 
+        DataLogSettings<float_t>{m_observer.getPredictedVerticalVelocityRef(), "Predicted Vertical Velocity"},
+        DataLogSettings<float_t>{m_observer.getPredictedVerticalAccelerationRef(), "Predicted Vertical Acceleration"},
+        DataLogSettings<float_t>{m_observer.getPredictedAngleRef(), "Predicted Angle to Horizontal"},
+        DataLogSettings<float_t>{m_observer.getMeasuredAltitudeRef(), "Measured Altitude"},
+        DataLogSettings<float_t>{m_observer.getMeasuredPressureRef(), "Measured Pressure"},
+        DataLogSettings<float_t>{m_observer.getMeasuredTemperatureRef(), "Measured Temperature"},
+        DataLogSettings<float_t>{m_observer.getMeasuredLinearAccelerationRef().x, "Measured Acceleration x"},
+        DataLogSettings<float_t>{m_observer.getMeasuredLinearAccelerationRef().y, "Measured Acceleration y"},
+        DataLogSettings<float_t>{m_observer.getMeasuredLinearAccelerationRef().z, "Measured Acceleration z"},
+        DataLogSettings<float_t>{m_observer.getMeasuredRotationRef().x, "Measured Rotation x"},
+        DataLogSettings<float_t>{m_observer.getMeasuredRotationRef().y, "Measured Rotation y"},
+        DataLogSettings<float_t>{m_observer.getMeasuredRotationRef().z, "Measured Rotation z"},
+        DataLogSettings<float_t>{m_observer.getMeasuredGravityRef().x, "Measured Gravity x"},
+        DataLogSettings<float_t>{m_observer.getMeasuredGravityRef().y, "Measured Gravity y"},
+        DataLogSettings<float_t>{m_observer.getMeasuredGravityRef().z, "Measured Gravity z"},
+        DataLogSettings<float_t>{m_observer.getMeasuredOrientationRef().r, "Measured Orientation real part"},
+        DataLogSettings<float_t>{m_observer.getMeasuredOrientationRef().i, "Measured Orientation i part"},
+        DataLogSettings<float_t>{m_observer.getMeasuredOrientationRef().j, "Measured Orientation j part"},
+        DataLogSettings<float_t>{m_observer.getMeasuredOrientationRef().k, "Measured Orientation k part"},
+        DataLogSettings<float_t>{m_observer.getMeasuredAngleRef(), "Measured Angle to Horizontal"},
         DataLogSettings<float_t>{m_controller.getErrorRef(), "controller error"},
         DataLogSettings<float_t>{m_controller.getFlightPathRef(), "flight path"},
         DataLogSettings<float_t>{m_controller.getVPartialRef(), "flght path velocity partial derivative"},
@@ -54,11 +72,11 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<uint_t>{m_altimeter.getSPIFrequencyRef(), Airbrakes_CFG_AltimeterSPIFrequency, "altimeter SPI speed"},
         EEPROMSettings<float_t>{m_altimeter.getGroundTemperatureRef(), Airbrakes_CFG_AltimeterNominalGroundTemperature, "altimeter ground temperature"},
         EEPROMSettings<float_t>{m_altimeter.getGroundPressureRef(), Airbrakes_CFG_AltimeterNominalGroundPressure, "altimeter ground pressure"},
-        EEPROMSettings<uint_t>{m_IMU.getSPIFrequencyRef(), Airbrakes_CFG_IMU_SPIFrequency, "imu spi speed"},
-        EEPROMSettings<uint32_t>{m_IMU.getAccelerationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu acceleration sample period"},
-        EEPROMSettings<uint32_t>{m_IMU.getAngularVelocitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu angular velocity sample period"},
-        EEPROMSettings<uint32_t>{m_IMU.getOrientationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu oreintation sample period"},
-        EEPROMSettings<uint32_t>{m_IMU.getGravitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu gravity sample period"},
+        EEPROMSettings<uint_t>{m_imu.getSPIFrequencyRef(), Airbrakes_CFG_IMU_SPIFrequency, "imu spi speed"},
+        EEPROMSettings<uint32_t>{m_imu.getAccelerationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu acceleration sample period"},
+        EEPROMSettings<uint32_t>{m_imu.getAngularVelocitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu angular velocity sample period"},
+        EEPROMSettings<uint32_t>{m_imu.getOrientationSamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu oreintation sample period"},
+        EEPROMSettings<uint32_t>{m_imu.getGravitySamplePeriodRef(), Airbrakes_CFG_IMU_SamplePeriod_us, "imu gravity sample period"},
         EEPROMSettings<float_t>{m_actuator.getActuatorLimitRef(), Airbrakes_CFG_MotorDefaultLimit, "actuator range limit"},
         EEPROMSettings<uint_t>{m_actuator.getEncoderStepsRef(), Airbrakes_CFG_MotorFullStrokeNumEncoderPositions, "actuator number of encoder positions"},
         EEPROMSettings<uint_t>{m_actuator.getMotorStepsRef(), Airbrakes_CFG_MotorFullStrokeNumSteps, "actuator number of steps"},
@@ -69,21 +87,21 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
     m_inputBuffer(115200),
 
     //simulation systems
+#ifndef NO_TX_HIL
     m_TxHIL(
-        m_controller.getRequestedDragRef(),
-        m_controller.getFlightPathRef(),
-        m_controller.getErrorRef(),
-        m_controller.getUpdateRuleDragRef(),
-        m_controller.getAdjustedDragRef(),
-        m_observer.getAltitudeRef(),
-        m_observer.getVerticalVelocityRef(),
-        m_observer.getAngleRef()
+        m_observer.getPredictedAltitudeRef(),
+        m_observer.getPredictedVerticalVelocityRef(),
+        m_observer.getMeasuredTemperatureRef(),
+        m_observer.getMeasuredPressureRef()
     ),
+#endif
+#ifndef NO_RX_HIL
     m_RxHIL(m_inputBuffer, 
-        m_observer.getAltitudeRef(),
-        m_observer.getVerticalVelocityRef(),
-        m_observer.getAngleRef()
+        m_observer.getPredictedAltitudeRef(),
+        m_observer.getPredictedVerticalVelocityRef(),
+        m_observer.getPredictedAngleRef()
     ),
+#endif
     m_HILRefreshPeriod(Airbrakes_CFG_SerialRefreshPeriod_ms),
     m_HILEnabled(false),
 
@@ -129,16 +147,21 @@ void Application::initialize(){
     }
     else Serial.println("Initialized the altimeter");
     //init IMU
-    if(m_IMU.initialize() != error_t::GOOD){
+    if(m_imu.initialize() != error_t::GOOD){
         Serial.println("Failed to detect the IMU");
         anyError = error_t::ERROR;
     }
     else Serial.println("Initialized the IMU");
     //init motor
     m_actuator.initialize();
-    //start timers
+    //initialize control syatem
     m_controller.resetInit();
     Serial.println("Initialized the controller");
+    if(m_observer.setMode(ObserverModes::Sensor) != error_t::GOOD){
+        Serial.println("Failed to place the observer into sensor mode");
+        anyError = error_t::ERROR;
+    }
+    else Serial.println("Placed the observer into sensor mode");
     //final message
     if(anyError == error_t::GOOD) Serial.println("Successfully initialized all systems");
     else Serial.println("Initialization complete, some systems failed to initialize");
@@ -157,13 +180,17 @@ void Application::makeShutdownSafe(bool printErrors){
 void Application::updateBackground(){
     //handle HIL updates and command inputs
     if(m_serialRefresh > m_HILRefreshPeriod){
+#ifndef NO_TX_HIL
         if(m_HILEnabled) m_TxHIL.sendUpdate();
+#endif
         m_inputBuffer.update();
          while(m_inputBuffer.hasData()){
             noInterrupts();
             m_interpreter.readLine();
             interrupts();
+#ifndef NO_RX_HIL
             if(m_HILEnabled) m_RxHIL.readLine();
+#endif
             m_inputBuffer.clear();
             m_inputBuffer.update();
          }
@@ -175,5 +202,5 @@ void Application::updateBackground(){
         m_telemetry.clearReady();
     }
     //update IMU
-    m_IMU.updateBackground();
+    m_imu.updateBackground();
 }

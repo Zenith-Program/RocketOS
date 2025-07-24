@@ -278,6 +278,21 @@ void BNO085_SPI::tare(){
     m_txQueue.push(makeTarePersistCallback());
 }
 
+Vector3 BNO085_SPI::getLastLinearAcceleration() const{
+    return m_currentLinearAcceleration;
+}
+
+Vector3 BNO085_SPI::getLastAngularVelocity() const{
+    return m_currentAngularVelocity;
+}
+
+Vector3 BNO085_SPI::getLastGravity() const{
+    return m_currentGravity;
+}
+
+Quaternion BNO085_SPI::getLastOrientation() const{
+    return m_currentOrientation;
+}
 
 //helper functions
 
@@ -718,13 +733,17 @@ const Quaternion& BNO085_SPI::getOrientationRef() const{
     return m_currentOrientation;
 }
 
-//output struct print functionality
+//output struct methods
 void Vector3::print() const{
     Serial.printf("<%.2f, %.2f, %.2f>", x, y, z);
 }
 
 void Vector3::println() const{
     Serial.printf("<%.2f, %.2f, %.2f>\n", x, y, z);
+}
+
+float_t Vector3::magnitude() const{
+    return sqrt(x * x + y * y + z * z);
 }
 
 void Quaternion::print() const{

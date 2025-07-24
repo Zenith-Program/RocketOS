@@ -12,25 +12,26 @@ namespace Airbrakes{
     };
 
     class Observer{
-    private:    
+    public:
+        //error codes
+        static constexpr error_t ERROR_AltimeterInitialization = error_t(2);
+        static constexpr error_t ERROR_IMUInitialization = error_t(3);
+    private:
+        static constexpr uint_t c_SamplePeriod_us = (Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us > Airbrakes_CFG_ObserverIMUMinSamplePeriod_us)? Airbrakes_CFG_ObserverAltimeterMinSamplePeriod_us : Airbrakes_CFG_ObserverIMUMinSamplePeriod_us;
+        static constexpr uint_t c_FilterOrder = 2 * Airbrakes_CFG_ObserverFilterDelay_us / c_SamplePeriod_us;
         //state
         ObserverModes m_mode;
         IntervalTimer m_timer;
-
-        //sample rates
-        uint_t m_baseSamplePeriod;
-        uint_t m_altimeterSamplePeriodDivider;
-        uint_t m_imuSamplePeriodDivider;
 
         //sensors
         Sensors::BNO085_SPI& m_imu;
         Sensors::MS5607_SPI& m_altimeter;
 
         //processing
-        RocketOS::Processing::Differentiator<2> m_verticalVelocityFilter;
-        RocketOS::Processing::LowPass<2> m_altitudeFilter;
-        RocketOS::Processing::LowPass<2> m_accelerationFilter;
-        RocketOS::Processing::LowPass<2> m_angleFilter;
+        RocketOS::Processing::Differentiator<c_FilterOrder> m_verticalVelocityFilter;
+        RocketOS::Processing::LowPass<c_FilterOrder> m_altitudeFilter;
+        RocketOS::Processing::LowPass<c_FilterOrder> m_accelerationFilter;
+        RocketOS::Processing::LowPass<c_FilterOrder> m_angleFilter;
 
         //values used by the controller 
         float_t m_predictedAltitude;
@@ -87,5 +88,17 @@ namespace Airbrakes{
         void sensorModeTimerISR();
         void filterSimModeTimerISR();
         error_t setupSensors();
+        void updateFilters();
+        void readSensors();
+
+    private:
+        // ######### command structure #########
+        using Command = RocketOS::Shell::Command;
+        using CommandList = RocketOS::Shell::CommandList;
+        using arg_t = RocketOS::Shell::arg_t;
+
+        // === ROOT COMMAND LIST ===
+
+        // =========================
     };
 }

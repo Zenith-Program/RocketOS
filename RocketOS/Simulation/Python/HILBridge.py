@@ -142,6 +142,8 @@ def serial_write_thread():
 def simulink_receive_thread():
     # Receives UDP packets from Simulink and pushes to Target
     while not stop_event.is_set():
+        if(SIM_TO_TARGET_COUNT == 0):
+            continue
         try:
             data, _ = udp_recv_sock.recvfrom(8 * SIM_TO_TARGET_COUNT)
             if len(data) != 8 * SIM_TO_TARGET_COUNT:

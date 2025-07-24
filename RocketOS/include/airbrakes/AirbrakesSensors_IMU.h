@@ -27,6 +27,7 @@ namespace Airbrakes{
 
             void print() const;
             void println() const;
+            float_t magnitude() const;
         };
 
         struct Quaternion{
@@ -97,6 +98,12 @@ namespace Airbrakes{
             void startSensor(IMUData);
             void startAllSensors();
             void tare();
+
+            //acessors
+            Vector3 getLastLinearAcceleration() const;
+            Vector3 getLastAngularVelocity() const;
+            Vector3 getLastGravity() const;
+            Quaternion getLastOrientation() const;
 
             //references for persistent & telemetry
             uint_t& getSPIFrequencyRef();
