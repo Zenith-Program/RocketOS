@@ -75,16 +75,19 @@
 
 /*Detection Configuration
 */
+#define Airbrakes_CFG_LaunchMaximumAltitude_m 100
 #define Airbrakes_CFG_LaunchMinimumVelocity_mPerS 50
 #define Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2 50
 #define Airbrakes_CFG_LaunchMinimumSamples 3
 #define Airbrakes_CFG_LaunchMinimumTime_ms 10000
 
+#define Airbrakes_CFG_CoastMinimumAltitude_m 100
 #define Airbrakes_CFG_CoastMinimumVelocity_mPerS 100
 #define Airbrakes_CFG_CoastMaximumAcceleration_mPerS2 20
 #define Airbrakes_CFG_CoastMinimumSamples 3
 #define Airbrakes_CFG_CoastMinimumTime_ms 10000
 
+#define Airbrakes_CFG_ApogeeMinimumAltitude_m 500
 #define Airbrakes_CFG_ApogeeMaximumVelocity_mPerS 10
 #define Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2 20
 #define Airbrakes_CFG_ApogeeMinimumSamples 3

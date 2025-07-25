@@ -35,6 +35,9 @@ namespace RocketOS{
 
 
         class SDFile{
+        public:
+            static constexpr error_t ERROR_FileAcess = error_t(2);
+            static constexpr error_t ERROR_BufferOverflow = error_t(3);
         private:
             SdFat& m_sd;
             FsFile m_file;
@@ -63,14 +66,15 @@ namespace RocketOS{
             error_t log(const T& value){
                 if(m_mode == SDFileModes::Record){
                     if(!m_file.isOpen()) m_file = m_sd.open(m_fileName, O_WRITE | O_CREAT | O_AT_END);
-                    if(!m_file) return error_t::ERROR;
+                    if(!m_file) return ERROR_FileAcess;
                     m_file.print(value);
                     return error_t::GOOD;
                 } 
                 uint_t remainingSpace = (m_buffer + m_bufferSize) - m_currentBufferPos;
                 auto result = PrintFunctions::printToBuffer(m_currentBufferPos, remainingSpace, value);
                 m_currentBufferPos = result.data;
-                return result.error;
+                if(result.error != error_t::GOOD) return ERROR_BufferOverflow;
+                return error_t::GOOD;
             }
 
         private:

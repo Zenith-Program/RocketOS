@@ -42,8 +42,8 @@ namespace RocketOS{
             error_t newFile(){
                 error_t error1 = m_file.newFile();
                 error_t error2 = logAllHeaders(std::make_index_sequence<c_size>());
-                if(error1 != error_t::GOOD) return 2;
-                if(error2 != error_t::GOOD) return 3;
+                if(error1 != error_t::GOOD) return error1;
+                if(error2 != error_t::GOOD) return error2;
                 return error_t::GOOD;
             }
 
@@ -87,7 +87,7 @@ namespace RocketOS{
                 error_t newError = std::get<tt_index>(m_values).logValue(m_file);
                 if(tt_index == c_size-1) m_file.log("\n");
                 else m_file.log(",");
-                return (prevError == error_t::GOOD && newError == error_t::GOOD)? error_t::GOOD : error_t::ERROR;
+                return (prevError != error_t::GOOD )? prevError : newError;
             }
 
             template<std::size_t tt_index>
@@ -95,7 +95,7 @@ namespace RocketOS{
                 error_t newError = std::get<tt_index>(m_values).logName(m_file);
                 if(tt_index == c_size-1) m_file.log("\n");
                 else m_file.log(",");
-                return (prevError == error_t::GOOD && newError == error_t::GOOD)? error_t::GOOD : error_t::ERROR;
+                return (prevError != error_t::GOOD )? prevError : newError;
             }
             
         };

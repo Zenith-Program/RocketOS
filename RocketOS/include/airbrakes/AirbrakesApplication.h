@@ -28,6 +28,7 @@ namespace Airbrakes{
         uint_t m_stateTransitionCounter;
         elapsedMillis m_stateTransitionTimer, m_stateTransitionSampleTimer;
         uint_t m_stateTransitionSamplePeriod;
+        bool m_armFlag;
         EventDetection m_launchDetectionParameters, m_coastDetectionParameters, m_apogeeDetectionParameters;
         // --- peripheral hardware systems ---
         Sensors::MS5607_SPI m_altimeter;
@@ -74,6 +75,7 @@ namespace Airbrakes{
             bool        //controller fault flag
         > m_telemetry;
         SDFileWithCommands m_log;
+        bool m_bufferFlightTelemetry;
 
         // --- non-volatile storage systems ---
         EEPROMWithCommands<
@@ -81,6 +83,7 @@ namespace Airbrakes{
             bool,                               //controller enable
             bool,                               //telemetry override
             bool,                               //log override
+            bool,                               //buffer flight telemetry flag
             FileName_t,                         //log file name
             FileName_t,                         //telemetry file name
             FileName_t,                         //flight plan file name
@@ -155,6 +158,8 @@ namespace Airbrakes{
         void initBoost();
         void initCoast();
         void initPostApogee();
+
+        void logPrint(const char*);
 
     private:
         // ######### command structure #########

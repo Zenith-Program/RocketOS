@@ -18,15 +18,28 @@ namespace Airbrakes{
             return {m_name, c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
         }
 
-        void logLine(const char* message){
+        error_t logLine(const char* message){
+            error_t error = error_t::GOOD;
+            error_t resultError;
             if(!m_enableOverride){
-                this->log("[");
-                this->log(millis());
-                this->log("] ");
-                this->log(message);
-                this->log("\n");
-                this->flush();
+                resultError = this->log("[");
+                if(resultError != error_t::GOOD) error = resultError;
+                resultError = this->log(millis());
+                if(resultError != error_t::GOOD) error = resultError;
+                resultError = this->log("] ");
+                if(resultError != error_t::GOOD) error = resultError;
+                resultError = this->log(message);
+                if(resultError != error_t::GOOD) error = resultError;
+                resultError = this->log("\n");
+                if(resultError != error_t::GOOD) error = resultError;
+                if(this->getMode() == SDFileModes::Record) resultError = this->flush();
+                if(resultError != error_t::GOOD) error = resultError;
             }
+            return error;
+        }
+
+        bool overrideEnabled(){
+            return m_enableOverride;
         }
 
         //refrence acessors for persistent storage
@@ -135,6 +148,10 @@ namespace Airbrakes{
 
         void clearReady(){
             m_refresh = 0;
+        }
+
+        bool overrideEnabled(){
+            return m_enableOverride;
         }
 
         auto& getOverrideRef(){

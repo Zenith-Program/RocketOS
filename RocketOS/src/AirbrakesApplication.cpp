@@ -12,9 +12,10 @@ using namespace RocketOS::Simulation;
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //program logic
     m_state(ProgramStates::Standby),
-    m_launchDetectionParameters("launch", Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms),
-    m_coastDetectionParameters("coast", Airbrakes_CFG_CoastMinimumVelocity_mPerS, Airbrakes_CFG_CoastMaximumAcceleration_mPerS2, Airbrakes_CFG_CoastMinimumSamples, Airbrakes_CFG_CoastMinimumTime_ms),
-    m_apogeeDetectionParameters("apogee", Airbrakes_CFG_ApogeeMaximumVelocity_mPerS, Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2, Airbrakes_CFG_ApogeeMinimumSamples, Airbrakes_CFG_ApogeeMinimumTime_ms),
+    m_armFlag(false),
+    m_launchDetectionParameters("launch", Airbrakes_CFG_LaunchMaximumAltitude_m, Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms),
+    m_coastDetectionParameters("coast", Airbrakes_CFG_CoastMinimumAltitude_m, Airbrakes_CFG_CoastMinimumVelocity_mPerS, Airbrakes_CFG_CoastMaximumAcceleration_mPerS2, Airbrakes_CFG_CoastMinimumSamples, Airbrakes_CFG_CoastMinimumTime_ms),
+    m_apogeeDetectionParameters("apogee", Airbrakes_CFG_ApogeeMinimumAltitude_m, Airbrakes_CFG_ApogeeMaximumVelocity_mPerS, Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2, Airbrakes_CFG_ApogeeMinimumSamples, Airbrakes_CFG_ApogeeMinimumTime_ms),
     //peripherals
     m_altimeter("altimeter", Airbrakes_CFG_AltimeterNominalGroundTemperature, Airbrakes_CFG_AltimeterNominalGroundPressure, Airbrakes_CFG_AltimeterSPIFrequency, TeensyTimerTool::TMR1),
     m_imu("imu", Airbrakes_CFG_IMU_SPIFrequency, Airbrakes_CFG_IMU_SamplePeriod_us),
@@ -59,13 +60,14 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         DataLogSettings<bool>{m_controller.getFaultFlagRef(), "controller fault"}
     ),
     m_log("log", m_sdCard, logBuffer, logBufferSize, Airbrakes_CFG_DefaultLogFile),
-
+    m_bufferFlightTelemetry(false),
     //persistent systems
     m_persistent("persistent",
         EEPROMSettings<uint_t>{m_controller.getClockPeriodRef(), Airbrakes_CFG_ControllerPeriod_us, "controller clock period"},
         EEPROMSettings<bool>{m_controller.getActiveFlagRef(), false, "controller flag"},
         EEPROMSettings<bool>{m_telemetry.getOverrideRef(), false, "telemetry override"},
         EEPROMSettings<bool>{m_log.getOverrideFlagRef(), false, "log override"},
+        EEPROMSettings<bool>{m_bufferFlightTelemetry, false, "buffer flight telemetry flag"},
         EEPROMSettings<FileName_t>{m_log.getNameBufferRef(), Airbrakes_CFG_DefaultLogFile, "log file name"},
         EEPROMSettings<FileName_t>{m_telemetry.getNameBufferRef(), Airbrakes_CFG_DefaultTelemetryFile, "telemetry file name"},
         EEPROMSettings<FileName_t>{m_flightPlan.getFileNameRef(), Airbrakes_CFG_DefaultFlightPlanFileName,"flight plan file"},
@@ -86,9 +88,9 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         EEPROMSettings<uint_t>{m_actuator.getEncoderStepsRef(), Airbrakes_CFG_MotorFullStrokeNumEncoderPositions, "actuator number of encoder positions"},
         EEPROMSettings<uint_t>{m_actuator.getMotorStepsRef(), Airbrakes_CFG_MotorFullStrokeNumSteps, "actuator number of steps"},
         EEPROMSettings<Motor::SteppingModes>{m_actuator.getSteppingModeRef(), Motor::SteppingModes::HalfStep, "actuator mode"},
-        EEPROMSettings<EventDetection::DetectionData>{m_launchDetectionParameters.getDataRef(), {Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms}, "launch detection parameters"},
-        EEPROMSettings<EventDetection::DetectionData>{m_coastDetectionParameters.getDataRef(), {Airbrakes_CFG_CoastMinimumVelocity_mPerS, Airbrakes_CFG_CoastMaximumAcceleration_mPerS2, Airbrakes_CFG_CoastMinimumSamples, Airbrakes_CFG_CoastMinimumTime_ms}, "coast detection parameters"},
-        EEPROMSettings<EventDetection::DetectionData>{m_apogeeDetectionParameters.getDataRef(), {Airbrakes_CFG_ApogeeMaximumVelocity_mPerS, Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2, Airbrakes_CFG_ApogeeMinimumSamples, Airbrakes_CFG_ApogeeMinimumTime_ms}, "apogee detection parameters"}
+        EEPROMSettings<EventDetection::DetectionData>{m_launchDetectionParameters.getDataRef(), {Airbrakes_CFG_LaunchMaximumAltitude_m, Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms}, "launch detection parameters"},
+        EEPROMSettings<EventDetection::DetectionData>{m_coastDetectionParameters.getDataRef(), {Airbrakes_CFG_CoastMinimumAltitude_m, Airbrakes_CFG_CoastMinimumVelocity_mPerS, Airbrakes_CFG_CoastMaximumAcceleration_mPerS2, Airbrakes_CFG_CoastMinimumSamples, Airbrakes_CFG_CoastMinimumTime_ms}, "coast detection parameters"},
+        EEPROMSettings<EventDetection::DetectionData>{m_apogeeDetectionParameters.getDataRef(), {Airbrakes_CFG_ApogeeMinimumAltitude_m, Airbrakes_CFG_ApogeeMaximumVelocity_mPerS, Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2, Airbrakes_CFG_ApogeeMinimumSamples, Airbrakes_CFG_ApogeeMinimumTime_ms}, "apogee detection parameters"}
     ),
 
     //serial systems
@@ -230,9 +232,55 @@ void Application::updateBackground(){
     }
 }
 
-//state tasks
-void Application::standbyTasks(){
 
+// ====== standby state =======
+void Application::initStandby(){
+    m_controller.stop();
+    m_actuator.sleep();
+}
+
+void Application::standbyTasks(){
+    if(m_armFlag) gotoState(ProgramStates::Armed);
+}
+
+
+// ====== armed state ======
+void Application::initArmed(){
+    //initialize logic variables
+    m_stateTransitionCounter = 0;
+    m_stateTransitionSampleTimer = 0;
+    m_stateTransitionTimer = 0;
+    //setup log
+    if(!m_log.overrideEnabled()){
+        if(m_log.setMode(RocketOS::Telemetry::SDFileModes::Record) != error_t::GOOD) logPrint("Error: failed to place log into recording mode");
+        if(m_log.newFile() != error_t::GOOD) logPrint("Error: failed to create a new log file");
+    }
+    else logPrint("Warning: Log is in override mode");
+    logPrint("Info: Begining airbrakes arming sequence");
+    //setup telemetry
+    if(!m_telemetry.overrideEnabled()){
+        if(m_telemetry.setFileMode(RocketOS::Telemetry::SDFileModes::Record)) logPrint("Error: failed to place telemetry into recording mode");
+        if(m_telemetry.newFile() != error_t::GOOD) logPrint("Error: failed to create a new telemetry file");
+    }
+    else logPrint("Warning: Telemetry is in override mode");
+    //setup observer
+    if(!m_HILEnabled){
+        if(m_observer.setMode(ObserverModes::Sensor) != error_t::GOOD){
+            logPrint("Error: Failed to place the observer into sensor mode");
+        }
+    }
+    else logPrint("Warning: System is in simulation mode");
+    //setup motor
+    m_actuator.sleep();
+    //setup controller
+    m_controller.stop();
+    //setup flight plan
+    if(!m_flightPlan.isLoaded()){
+        if(m_flightPlan.loadFromFile() != error_t::GOOD) logPrint("Error: Unable to load a flight plan");
+        else logPrint("Warning: Flight plan had to be reloaded");
+    }
+    //log state transition
+    logPrint("Info: Airbrakes arming sequence complete");
 }
 
 void Application::armedTasks(){
@@ -241,29 +289,101 @@ void Application::armedTasks(){
         m_telemetry.logLine();
         m_telemetry.clearReady();
     }
-    //check for state transition
+    //check for launch
     if(m_stateTransitionSampleTimer >= m_stateTransitionSamplePeriod){
+        m_stateTransitionSampleTimer = 0;
         if(m_observer.getVeritcalVelocity() > m_launchDetectionParameters.getVerticalVelocityThreshold() && m_observer.getVerticalAcceleration() > m_launchDetectionParameters.getVerticalAccelerationThreshold() && m_stateTransitionTimer > m_launchDetectionParameters.getTimeThreshold()){
             m_stateTransitionCounter++;
-            if(m_stateTransitionCounter >= m_launchDetectionParameters.getConsecutiveSamplesThreshold()) gotoState(ProgramStates::Boost);
+            if(m_stateTransitionCounter >= m_launchDetectionParameters.getConsecutiveSamplesThreshold()){
+                 gotoState(ProgramStates::Boost);
+                 return;
+            }
         }
         else m_stateTransitionCounter = 0;
     }
+    //check for disarm
+    if(!m_armFlag){
+        logPrint("Info: Airbrakes was disarmed");
+        gotoState(ProgramStates::Standby);
+        return;
+    }
+}
+
+
+// ====== Boost State ======
+void Application::initBoost(){
+    //initialize logic variables
+    m_stateTransitionCounter = 0;
+    m_stateTransitionSampleTimer = 0;
+    m_stateTransitionTimer = 0;
+    //switch log and telemetry mode
+    if(m_bufferFlightTelemetry){
+        if(m_log.setMode(RocketOS::Telemetry::SDFileModes::Buffer) != error_t::GOOD) logPrint("Error: Failed to switch log to buffer mode");
+        if(m_log.setMode(RocketOS::Telemetry::SDFileModes::Buffer) != error_t::GOOD) logPrint("Error: Failed to switch telemetry to buffer mode");
+    }
+    //enable motor
+    m_actuator.setTargetDeployment(0);
+    m_actuator.wake();
+    //log state transition
+    logPrint("Info: Boost detected");
 }
 
 void Application::boostTasks(){
+    //log telemetry
+    if(m_telemetry.ready()){
+        error_t error = m_telemetry.logLine();
+        //flush buffer if overflow occurs
+        if(error == RocketOS::Telemetry::SDFile::ERROR_BufferOverflow){
+            m_telemetry.flush();
+            m_telemetry.logLine();
+            logPrint("Info: Telemetry buffer overflow detected");
+        }
+        m_telemetry.clearReady();
+    }
+    if(m_stateTransitionSampleTimer >= m_stateTransitionSamplePeriod){
+        //check for false boost
+        m_stateTransitionSampleTimer = 0;
+        if(m_observer.getVeritcalVelocity() > m_coastDetectionParameters.getVerticalVelocityThreshold() && m_observer.getVerticalAcceleration() > m_launchDetectionParameters.getVerticalAccelerationThreshold() && m_stateTransitionTimer > m_launchDetectionParameters.getTimeThreshold()){
+            m_stateTransitionCounter++;
+            if(m_stateTransitionCounter >= m_launchDetectionParameters.getConsecutiveSamplesThreshold()){
+                 gotoState(ProgramStates::Armed);
+                 return;
+            }
+        }
+        else m_stateTransitionCounter = 0;
+    }
+    //check for coast
 
+    //check for disarm
+    if(!m_armFlag){
+        logPrint("Info: Airbrakes was disarmed");
+        gotoState(ProgramStates::Standby);
+        return;
+    }
 }
 
+
+// ====== Coast State ======
 void Application::coastTasks(){
 
 }
 
+void Application::initCoast(){
+
+}
+
+
+// ====== Post Apogee State ======
 void Application::postApogeeTasks(){
 
 }
 
-//state transitions
+void Application::initPostApogee(){
+    m_controller.stop();
+    m_actuator.setTargetDeployment(0);
+}
+
+//state transition
 void Application::gotoState(ProgramStates newState){
     switch(newState){
         case ProgramStates::Standby:
@@ -290,25 +410,14 @@ void Application::gotoState(ProgramStates newState){
     }
 }
 
-void Application::initStandby(){
-    m_controller.stop();
-    m_actuator.sleep();
-}
 
-void Application::initArmed(){
-
-}
-
-void Application::initBoost(){
-
-}
-
-void Application::initCoast(){
-
-}
-
-void Application::initPostApogee(){
-    m_controller.stop();
-    m_actuator.setTargetDeployment(0);
-
+//helper functions
+void Application::logPrint(const char* message){
+    if(m_log.logLine(message) == RocketOS::Telemetry::SDFile::ERROR_BufferOverflow){
+        m_log.flush();
+        m_log.logLine("Info: Log buffer overflow detected");
+        Serial.println("Info: Log buffer overflow detected");
+        m_log.logLine(message);
+    }
+    Serial.println(message);
 }

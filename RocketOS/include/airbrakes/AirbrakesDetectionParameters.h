@@ -6,6 +6,7 @@ namespace Airbrakes{
     class EventDetection{
     public:
         struct DetectionData{
+            float_t altitudeThreshold;
             float_t verticalVelocityThreshold;
             float_t verticalAccelerationThreshold;
             uint_t requiredConsecutiveSamples;
@@ -15,8 +16,9 @@ namespace Airbrakes{
         const char* const m_name;
         DetectionData m_data;
     public:
-        EventDetection(const char*, float_t, float_t, uint_t, uint_t);
+        EventDetection(const char*, float_t, float_t, float_t, uint_t, uint_t);
 
+        float_t getAltitudeThreshold() const;
         float_t getVerticalVelocityThreshold() const;
         float_t getVerticalAccelerationThreshold() const;
         float_t getConsecutiveSamplesThreshold() const;
@@ -34,6 +36,20 @@ namespace Airbrakes{
 
         // === ROOT COMMAND LIST ===
             //children command lists
+            // === ALTITUDE COMMAND LIST ===
+                //commands
+                const std::array<Command, 2> c_altitudeCommands{
+                    Command{"", "", [this](arg_t){
+                        Serial.print(m_data.altitudeThreshold);
+                        Serial.println("m");
+                    }},
+                    Command{"set", "f", [this](arg_t args){
+                        m_data.altitudeThreshold = args[0].getFloatData();
+                        if(m_data.altitudeThreshold < 0) Serial.println("Warning: Negative altitude value");
+                    }}
+                };
+            // =================================
+
             // === VELOCITY COMMAND LIST ===
                 //commands
                 const std::array<Command, 2> c_velocityCommands{
@@ -47,7 +63,7 @@ namespace Airbrakes{
                         m_data.verticalVelocityThreshold = newValue;
                     }}
                 };
-            // =================================
+            // =============================
 
             // === ACCELERATION COMMAND LIST ===
                 //commands
@@ -75,7 +91,7 @@ namespace Airbrakes{
                         m_data.requiredConsecutiveSamples = args[0].getUnsignedData();
                     }}
                 };
-            // =================================
+            // ============================
 
             // === TIME COMMAND LIST ===
                 //commands
@@ -89,10 +105,11 @@ namespace Airbrakes{
                         m_data.minimumTime_ms = args[0].getUnsignedData();
                     }}
                 };
-            // =================================
+            // =========================
             //----------------------
             //sub commmans
-            const std::array<CommandList, 4> c_rootSubCommands{
+            const std::array<CommandList, 5> c_rootSubCommands{
+                CommandList{"altitude", c_altitudeCommands.data(), c_altitudeCommands.size(), nullptr, 0},
                 CommandList{"velocity", c_velocityCommands.data(), c_velocityCommands.size(), nullptr, 0},
                 CommandList{"acceleration", c_accelerationCommands.data(), c_accelerationCommands.size(), nullptr, 0},
                 CommandList{"samples", c_samplesCommands.data(), c_samplesCommands.size(), nullptr, 0},
