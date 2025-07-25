@@ -4,6 +4,10 @@ using namespace Airbrakes;
 
 EventDetection::EventDetection(const char* name, float_t altitude, float_t velocity, float_t acceleration, uint_t samples, uint_t time) : m_name(name), m_data({altitude, velocity, acceleration, samples, time}) {}
 
+
+float_t EventDetection::getAltitudeThreshold() const{
+    return m_data.altitudeThreshold;
+}
 float_t EventDetection::getVerticalAccelerationThreshold() const{
     return m_data.verticalVelocityThreshold;
 }

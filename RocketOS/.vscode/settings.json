@@ -3,6 +3,13 @@
         "limits": "cpp",
         "functional": "cpp",
         "type_traits": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "iterator": "cpp",
+        "initializer_list": "cpp",
+        "new": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp"
     }
 }

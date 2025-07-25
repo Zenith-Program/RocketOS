@@ -66,7 +66,7 @@ void Controller::clock(){
     m_adjustedDragArea = m_updateRuleDragArea;
     //limit control input to the physical range of the actuators
     m_requestedDragArea = getBestPossibleDragArea(m_adjustedDragArea, m_error);
-    if(m_requestedDragArea != m_adjustedDragArea) m_isSaturated = true;
+    m_isSaturated = (m_requestedDragArea != m_adjustedDragArea);
 }
 
 //helpers

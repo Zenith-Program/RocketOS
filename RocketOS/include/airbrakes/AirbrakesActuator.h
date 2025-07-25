@@ -54,6 +54,7 @@ namespace Airbrakes{
             error_t setTargetDeployment(float_t);
             error_t setActuatorLimit(float_t);
             float_t getCurrentDeployment();
+            bool onTarget();
             float_t getTarget() const;
             void beginTare();
             void beginZero();

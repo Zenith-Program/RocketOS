@@ -72,8 +72,8 @@ namespace RocketOS{
                 } 
                 uint_t remainingSpace = (m_buffer + m_bufferSize) - m_currentBufferPos;
                 auto result = PrintFunctions::printToBuffer(m_currentBufferPos, remainingSpace, value);
-                m_currentBufferPos = result.data;
                 if(result.error != error_t::GOOD) return ERROR_BufferOverflow;
+                m_currentBufferPos = result.data;
                 return error_t::GOOD;
             }
 

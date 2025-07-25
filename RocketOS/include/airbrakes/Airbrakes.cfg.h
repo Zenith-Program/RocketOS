@@ -7,7 +7,7 @@
 
 /*Telemetry Configuration
 */
-#define Airbrakes_CFG_TelemetryBufferSize 0x20000 //128Kb
+#define Airbrakes_CFG_TelemetryBufferSize 0x6000 /*0x20000 //128Kb*/
 #define Airbrakes_CFG_LogBufferSize 512
 #define Airbrakes_CFG_TelemetryRefreshPeriod_ms 100
 
@@ -33,7 +33,7 @@
 /*Controller Configuration
 */
 #define Airbrakes_CFG_ControllerPeriod_us 100000
-#define Airbrakes_CFG_DecayRate -5
+#define Airbrakes_CFG_DecayRate -2.5
 
 
 /*Simulation Configuration
@@ -75,21 +75,23 @@
 
 /*Detection Configuration
 */
-#define Airbrakes_CFG_LaunchMaximumAltitude_m 100
-#define Airbrakes_CFG_LaunchMinimumVelocity_mPerS 50
-#define Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2 50
+#define Airbrakes_CFG_LaunchMaximumAltitude_m 10
+#define Airbrakes_CFG_LaunchMinimumVelocity_mPerS 30
+#define Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2 100
 #define Airbrakes_CFG_LaunchMinimumSamples 3
 #define Airbrakes_CFG_LaunchMinimumTime_ms 10000
 
-#define Airbrakes_CFG_CoastMinimumAltitude_m 100
-#define Airbrakes_CFG_CoastMinimumVelocity_mPerS 100
-#define Airbrakes_CFG_CoastMaximumAcceleration_mPerS2 20
-#define Airbrakes_CFG_CoastMinimumSamples 3
-#define Airbrakes_CFG_CoastMinimumTime_ms 10000
+#define Airbrakes_CFG_BurnoutMinimumAltitude_m 70
+#define Airbrakes_CFG_BurnoutMinimumVelocity_mPerS 100
+#define Airbrakes_CFG_BurnoutMaximumAcceleration_mPerS2 -10
+#define Airbrakes_CFG_BurnoutMinimumSamples 3
+#define Airbrakes_CFG_BurnoutMinimumTime_ms 400
 
 #define Airbrakes_CFG_ApogeeMinimumAltitude_m 500
-#define Airbrakes_CFG_ApogeeMaximumVelocity_mPerS 10
-#define Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2 20
+#define Airbrakes_CFG_ApogeeMaximumVelocity_mPerS 5
+#define Airbrakes_CFG_ApogeeMaximumAcceleration_mPerS2 0
 #define Airbrakes_CFG_ApogeeMinimumSamples 3
-#define Airbrakes_CFG_ApogeeMinimumTime_ms 10000
+#define Airbrakes_CFG_ApogeeMinimumTime_ms 6000
+
+#define Airbrakes_CFG_EventDetectionSamplePeriod_ms 50
 

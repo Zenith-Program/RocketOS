@@ -20,9 +20,8 @@ namespace Airbrakes{
 
         error_t logLine(const char* message){
             error_t error = error_t::GOOD;
-            error_t resultError;
             if(!m_enableOverride){
-                resultError = this->log("[");
+                error_t resultError = this->log("[");
                 if(resultError != error_t::GOOD) error = resultError;
                 resultError = this->log(millis());
                 if(resultError != error_t::GOOD) error = resultError;
@@ -32,7 +31,7 @@ namespace Airbrakes{
                 if(resultError != error_t::GOOD) error = resultError;
                 resultError = this->log("\n");
                 if(resultError != error_t::GOOD) error = resultError;
-                if(this->getMode() == SDFileModes::Record) resultError = this->flush();
+                if(this->getMode() == RocketOS::Telemetry::SDFileModes::Record) resultError = this->flush();
                 if(resultError != error_t::GOOD) error = resultError;
             }
             return error;
@@ -154,9 +153,15 @@ namespace Airbrakes{
             return m_enableOverride;
         }
 
-        auto& getOverrideRef(){
-            return m_enableOverride;
+        uint_t getRefreshPeriod(){
+            return m_refreshPeriod;
         }
+
+        void getRefreshPeriod(uint_t newPeriod){
+            m_refreshPeriod = newPeriod;
+        }
+
+        
 
         //refrence acessors for persistent storage
         auto& getNameBufferRef(){
@@ -165,6 +170,10 @@ namespace Airbrakes{
 
         auto& getRefreshPeriodRef(){
             return m_refreshPeriod;
+        }
+
+        auto& getOverrideRef(){
+            return m_enableOverride;
         }
 
     private:
@@ -219,8 +228,8 @@ namespace Airbrakes{
             // === OVERRIDE SUBCOMMAND ===
                 const std::array<Command, 3> c_overrideCommands{
                     Command{"", "", [this](arg_t){
-                        if(m_enableOverride) Serial.println("telemetry is disabled");
-                        else Serial.println("telemetry is enabled");
+                        if(m_enableOverride) Serial.println("Telemetry is disabled");
+                        else Serial.println("Telemetry is enabled");
                     }},
                     Command{"set", "", [this](arg_t){
                         m_enableOverride = true;

@@ -15,7 +15,7 @@ namespace RocketOS{
             }
 
             float_t output() const{
-                return m_filter.output() / pow2(t_order);
+                return m_filter.output() / pow2(t_order-1);
             }
 
             void reset(){
@@ -47,7 +47,7 @@ namespace RocketOS{
             static constexpr std::array<float_t,t_order> makeCoefficients(){
                 std::array<float_t, t_order> array{};
                 for(uint_t i=0; i<t_order; i++){
-                    array[i] = binomial(t_order, i);
+                    array[i] = binomial(t_order-1, i);
                 }
                 return array;
             }

@@ -13,27 +13,28 @@
 #include <Arduino.h> //serial printing, elapsedmillis
 
 //#define NO_TX_HIL
-#define NO_RX_HIL
+//#define NO_RX_HIL
 
 namespace Airbrakes{
 
     class Application{
     private:
         enum class ProgramStates{
-            Standby, Armed, Boost, Coast, PostApogee
+            Standby, Armed, ReArmed, Boost, Coast, Recovery
         };
     private:
         // --- program logic systems ---
         ProgramStates m_state;
         uint_t m_stateTransitionCounter;
         elapsedMillis m_stateTransitionTimer, m_stateTransitionSampleTimer;
-        uint_t m_stateTransitionSamplePeriod;
+        uint_t m_stateTransitionSamplePeriod_ms;
         bool m_armFlag;
-        EventDetection m_launchDetectionParameters, m_coastDetectionParameters, m_apogeeDetectionParameters;
+        EventDetection m_launchDetectionParameters, m_burnoutDetectionParameters, m_apogeeDetectionParameters;
         // --- peripheral hardware systems ---
         Sensors::MS5607_SPI m_altimeter;
         Sensors::BNO085_SPI m_imu;
         Motor::Actuator m_actuator;
+        bool m_actuateInFlight;
         // --- control system ---
         Controls::Controller m_controller;
         Controls::FlightPlan m_flightPlan;
@@ -81,6 +82,7 @@ namespace Airbrakes{
         EEPROMWithCommands<
             uint_t,                             //controller update period
             bool,                               //controller enable
+            bool,                               //telemetry buffer mode flag
             bool,                               //telemetry override
             bool,                               //log override
             bool,                               //buffer flight telemetry flag
@@ -104,9 +106,11 @@ namespace Airbrakes{
             uint_t,                             //motor encoder steps
             uint_t,                             //motor steps
             Motor::SteppingModes,               //motor stepping mode
-            EventDetection::DetectionData,
-            EventDetection::DetectionData,
-            EventDetection::DetectionData
+            bool,                               //actuate in flight flag
+            EventDetection::DetectionData,      //launch detection
+            EventDetection::DetectionData,      //burnout detection
+            EventDetection::DetectionData,      //apogee detection
+            uint_t                              //detection sample period
         > m_persistent;
 
         // --- serial port systems ---
@@ -116,19 +120,22 @@ namespace Airbrakes{
         // --- HIL systems ---
 #ifndef NO_TX_HIL
         RocketOS::Simulation::TxHIL<
-            float_t,    //predicted altitude
-            float_t,    //predicted vertical velocity
-            float_t,    //predicted vertical acceleration
-            float_t,    //predicted angle
-            float_t,    //meaaured pressure
-            float_t,    //measured temperature
-            float_t     //measured altitude
+            float_t,    //drag area
+            float_t,    //flight path
+            float_t,    //error
+            float_t,    //update rule drag
+            float_t,    //adjusted drag
+            float_t,    //altitude echo
+            float_t,    //velocity echo
+            float_t,    //acceleration echo
+            float_t     //angle echo
         > m_TxHIL;
 #endif
 #ifndef NO_RX_HIL
         RocketOS::Simulation::RxHIL<
             float_t,    //altitude
             float_t,    //vertical velocity
+            float_t,    //vertical acceleration
             float_t     //angle
         > m_RxHIL;
 #endif
@@ -150,14 +157,15 @@ namespace Airbrakes{
         void armedTasks();
         void boostTasks();
         void coastTasks();
-        void postApogeeTasks();
+        void recoveryTasks();
 
         void gotoState(ProgramStates);
         void initStandby();
         void initArmed();
+        void initReArmed();
         void initBoost();
         void initCoast();
-        void initPostApogee();
+        void initRecovery();
 
         void logPrint(const char*);
 
@@ -206,34 +214,108 @@ namespace Airbrakes{
                 };
             // =============================
 
-            // === DETECTION SUBCOMMAND ===
+            // === FLIGHT SUBCOMMAND ===
+                //children command lists
+                // === SAMPLE SUBCOMMAND ===
+                    //list of commands
+                    const std::array<Command, 2> c_flightSampleCommands{
+                        Command{"", "", [this](arg_t){
+                            Serial.print(m_stateTransitionSamplePeriod_ms);
+                            Serial.println("ms");
+                        }},
+                        Command{"set", "u", [this](arg_t args){
+                            m_stateTransitionSamplePeriod_ms = args[0].getUnsignedData();
+                        }}
+                    };
+                // =========================
+
+                // === BUFFER SUBCOMMAND ===
+                //list of commands
+                const std::array<Command, 3> c_flightBufferCommands{
+                    Command{"", "", [this](arg_t){
+                        if(m_bufferFlightTelemetry) Serial.println("Buffer mode is enabled");
+                        else Serial.println("Buffer mode is is disabled");
+                    }},
+                    Command{"set", "", [this](arg_t){
+                        m_bufferFlightTelemetry = true;
+                    }},
+                    Command{"clear", "", [this](arg_t){
+                        m_bufferFlightTelemetry = false;
+                    }}
+                };
+                // ==============================
+
+                // === ACTUATE SUBCOMMAND ===
+                const std::array<Command, 3> c_flightActuateCommands{
+                    Command{"", "", [this](arg_t){
+                        if(m_actuateInFlight) Serial.println("Actuators are enabled for flight");
+                        else Serial.println("Actuators are disabled for flight");
+                    }},
+                    Command{"set", "", [this](arg_t){
+                        m_actuateInFlight = true;
+                    }},
+                    Command{"clear", "", [this](arg_t){
+                        m_actuateInFlight = false;
+                    }}
+                };
+                // ==========================
+                //----------------------
+
                 //list of subcommands
-                const std::array<CommandList, 3> c_detectionSubCommands{
+                const std::array<CommandList, 7> c_flightSubCommands{
+                    CommandList{"buffer", c_flightBufferCommands.data(), c_flightBufferCommands.size(), nullptr, 0},
+                    CommandList{"actuate", c_flightActuateCommands.data(), c_flightActuateCommands.size(), nullptr, 0},
+                    CommandList{"sample", c_flightSampleCommands.data(), c_flightSampleCommands.size(), nullptr, 0},
                     m_launchDetectionParameters.getCommands(), 
-                    m_coastDetectionParameters.getCommands(), 
-                    m_apogeeDetectionParameters.getCommands()
+                    m_burnoutDetectionParameters.getCommands(), 
+                    m_apogeeDetectionParameters.getCommands(),
+                    m_flightPlan.getCommands(),
                 };
             // ============================
+
+            
+
             //list of subcommands
-            const std::array<CommandList, 10> c_rootChildren{
+            const std::array<CommandList, 9> c_rootChildren{
+                CommandList{"flight", nullptr, 0, c_flightSubCommands.data(), c_flightSubCommands.size()},
                 m_controller.getCommands(),
-                m_flightPlan.getCommands(),
                 m_log.getCommands(),
                 m_telemetry.getCommands(),
                 m_persistent.getCommands(),
                 CommandList{"sim", c_simCommands.data(), c_simCommands.size(), c_simChildren.data(), c_simChildren.size()},
                 m_altimeter.getCommands(),
                 m_imu.getCommands(),
-                m_actuator.getCommands(),
-                CommandList{"detection", nullptr, 0, c_detectionSubCommands.data(), c_detectionSubCommands.size()}
+                m_actuator.getCommands()
+                
             };
             //list of local commands
-            const std::array<Command, 4> c_rootCommands{
-                Command{"echo", "", [](arg_t){
-                    Serial.println("echo");
+            const std::array<Command, 5> c_rootCommands{
+                Command{"arm", "", [this](arg_t){
+                    m_armFlag = true;
                 }},
-                Command{"commands", "", [this](arg_t){
-                    c_root.printAllCommands();
+                Command{"disarm", "", [this](arg_t){
+                    m_armFlag = false;
+                }},
+                Command{"state", "", [this](arg_t){
+                    switch(m_state){
+                        case ProgramStates::Standby:
+                        default:
+                            Serial.println("Standby");
+                        break;
+                        case ProgramStates::Armed:
+                        case ProgramStates::ReArmed:
+                            Serial.println("Armed");
+                        break;
+                        case ProgramStates::Boost:
+                            Serial.println("Boost");
+                        break;
+                        case ProgramStates::Coast:
+                            Serial.println("Coast");
+                        break;
+                        case ProgramStates::Recovery:
+                            Serial.println("Recovery");
+                        break;
+                    }
                 }},
                 Command{"safe", "", [this](arg_t){
                     makeShutdownSafe();

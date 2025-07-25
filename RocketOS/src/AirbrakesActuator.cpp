@@ -127,6 +127,12 @@ float_t Actuator::getCurrentDeployment(){
     return getUnitDeploymentFromEncoderPosition(abs(m_encoder.read()));
 }
 
+bool Actuator::onTarget(){
+    int_t currentEncoderError = m_currentEncoderPosition - m_targetEncoderPosition;
+    if(abs(currentEncoderError) < MOTOR_ENCODER_TOLERANCE) return true;
+    return false;
+}
+
 float_t Actuator::getTarget() const{
     return getUnitDeploymentFromEncoderPosition(m_targetEncoderPosition);
 }
@@ -151,7 +157,7 @@ void Actuator::beginTare(){
 
 void Actuator::beginZero(){
     //initialize calibration data
-    bool needToStart = m_state == States::Sleep;
+    bool needToStart = (m_state == States::Sleep);
     m_state = States::Zero;
     m_encoderDifferentiator.reset();
     m_currentEncoderDerivative = 0;
