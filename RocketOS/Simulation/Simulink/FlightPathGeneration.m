@@ -160,8 +160,8 @@ function y = linInterp(x1,y1,x2,y2,x)
     end
 end
 
-function saveFlightPath(file, altitudes, targetApogee, minDragArea, maxDragArea, mass, temp, pressure, maxVelocity, vSize, angleSize)
-    header = [targetApogee minDragArea maxDragArea mass temp pressure maxVelocity vSize angleSize];
+function saveFlightPath(file, altitudes, targetApogee, minDragArea, maxDragArea, angleLim, mass, temp, pressure, maxVelocity, vSize, angleSize)
+    header = [targetApogee minDragArea maxDragArea angleLim mass temp pressure maxVelocity vSize angleSize];
     writematrix(header, file, 'WriteMode','overwrite');
     writematrix(altitudes, file, 'WriteMode','append');
 end
@@ -199,6 +199,7 @@ LaunchSiteTemperature = 288.15; %K
 TargetApogee = 800; %m
 MinimumDragArea = 0.0025; %m^2
 MaximumDragArea = 0.01; %m^2
+ActuatorDeploymentAngleLimit = 90; %degrees
 DryMass = 3; %kg
 
 %Mesh Properties
@@ -281,7 +282,7 @@ ylabel("Angle (degrees)");
 zlabel("Altitude (m)");
 
 %save to file
-saveFlightPath(ExportFileName, centerPathAltitudes, TargetApogee, MinimumDragArea, MaximumDragArea, DryMass, LaunchSiteTemperature, LaunchSitePressure, MaxVelocity, VelocitySamples, AngleSamples);
+saveFlightPath(ExportFileName, centerPathAltitudes, TargetApogee, MinimumDragArea, MaximumDragArea, ActuatorDeploymentAngleLimit, DryMass, LaunchSiteTemperature, LaunchSitePressure, MaxVelocity, VelocitySamples, AngleSamples);
 
 %For simulink modeling
 SimMesh = centerPathAltitudes(end:-1:1, end:-1:1)';

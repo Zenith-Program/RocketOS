@@ -86,7 +86,7 @@ void Observer::readSensors(){
     m_measuredGravity = m_imu.getLastGravity();
     m_measuredOrientation = m_imu.getLastOrientation();
     m_measuredVerticalAcceleration = m_measuredLinearAcceleration.z;
-    m_measuredAngleToHorizontal = acos(m_measuredGravity.z / m_measuredGravity.magnitude());
+    m_measuredAngleToHorizontal = asin(m_measuredGravity.z / m_measuredGravity.magnitude());
 }
 
 //controller interface

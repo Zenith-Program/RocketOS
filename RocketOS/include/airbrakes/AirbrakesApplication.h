@@ -12,8 +12,17 @@
 #include "AirbrakesDetectionParameters.h"
 #include <Arduino.h> //serial printing, elapsedmillis
 
+// ===simulation control macros ===
 //#define NO_TX_HIL
 //#define NO_RX_HIL
+
+// === state names ===
+#define APP_STANDBY_STATE_NAME "standby"
+#define APP_ARMED_STATE_NAME "armed"
+#define APP_BOOST_STATE_NAME "boost"
+#define APP_COAST_STATE_NAME "coast"
+#define APP_RECOVERY_STATE_NAME "recovery"
+
 
 namespace Airbrakes{
 
@@ -25,6 +34,7 @@ namespace Airbrakes{
     private:
         // --- program logic systems ---
         ProgramStates m_state;
+        const char* m_stateName;
         uint_t m_stateTransitionCounter;
         elapsedMillis m_stateTransitionTimer, m_stateTransitionSampleTimer;
         uint_t m_stateTransitionSamplePeriod_ms;
@@ -43,37 +53,38 @@ namespace Airbrakes{
         // --- sd card systems ---
         SdFat m_sdCard;
         DataLogWithCommands<
-            float_t,    //predicted altitude
-            float_t,    //predicted vertical velocity
-            float_t,    //predicted vertical acceleration
-            float_t,    //predicted angle to horizontal
-            float_t,    //measured altitude
-            float_t,    //measured pressure
-            float_t,    //measured temperature
-            float_t,    //measured acceleration x
-            float_t,    //measured acceleration y
-            float_t,    //measured acceleration z
-            float_t,    //measured rotation x
-            float_t,    //measured rotation y
-            float_t,    //measured rotation z
-            float_t,    //measured gravity x
-            float_t,    //measured gravity y
-            float_t,    //measured gravity z
-            float_t,    //measured orientation r
-            float_t,    //measured orientation i
-            float_t,    //measured orientation j
-            float_t,    //measured orientation k
-            float_t,    //measured angle to horizontal
-            float_t,    //controller error
-            float_t,    //controller flight path
-            float_t,    //controller flight path velocity partial
-            float_t,    //controller flight path angle partial
-            float_t,    //controller update rule drag
-            float_t,    //controller adjusted drag
-            float_t,    //controller requested drag
-            bool,       //controller update rule clamp flag
-            bool,       //controller saturation flag
-            bool        //controller fault flag
+            const char*,    //state
+            float_t,        //predicted altitude
+            float_t,        //predicted vertical velocity
+            float_t,        //predicted vertical acceleration
+            float_t,        //predicted angle to horizontal
+            float_t,        //measured altitude
+            float_t,        //measured pressure
+            float_t,        //measured temperature
+            float_t,        //measured acceleration x
+            float_t,        //measured acceleration y
+            float_t,        //measured acceleration z
+            float_t,        //measured rotation x
+            float_t,        //measured rotation y
+            float_t,        //measured rotation z
+            float_t,        //measured gravity x
+            float_t,        //measured gravity y
+            float_t,        //measured gravity z
+            float_t,        //measured orientation r
+            float_t,        //measured orientation i
+            float_t,        //measured orientation j
+            float_t,        //measured orientation k
+            float_t,        //measured angle to horizontal
+            float_t,        //controller error
+            float_t,        //controller flight path
+            float_t,        //controller flight path velocity partial
+            float_t,        //controller flight path angle partial
+            float_t,        //controller update rule drag
+            float_t,        //controller adjusted drag
+            float_t,        //controller requested drag
+            bool,           //controller update rule clamp flag
+            bool,           //controller saturation flag
+            bool            //controller fault flag
         > m_telemetry;
         SDFileWithCommands m_log;
         bool m_bufferFlightTelemetry;
@@ -300,20 +311,20 @@ namespace Airbrakes{
                     switch(m_state){
                         case ProgramStates::Standby:
                         default:
-                            Serial.println("Standby");
+                            Serial.println(APP_STANDBY_STATE_NAME);
                         break;
                         case ProgramStates::Armed:
                         case ProgramStates::ReArmed:
-                            Serial.println("Armed");
+                            Serial.println(APP_ARMED_STATE_NAME);
                         break;
                         case ProgramStates::Boost:
-                            Serial.println("Boost");
+                            Serial.println(APP_BOOST_STATE_NAME);
                         break;
                         case ProgramStates::Coast:
-                            Serial.println("Coast");
+                            Serial.println(APP_COAST_STATE_NAME);
                         break;
                         case ProgramStates::Recovery:
-                            Serial.println("Recovery");
+                            Serial.println(APP_RECOVERY_STATE_NAME);
                         break;
                     }
                 }},
@@ -329,4 +340,4 @@ namespace Airbrakes{
         // =========================
 
     };
-} 
+}

@@ -39,6 +39,10 @@ error_t FlightPlan::loadFromFile(){
     readValue = readNextFloat();
     if(readValue.error != error_t::GOOD) return errorOut(ERROR_Formating);
     m_maximumDragArea = readValue.data;
+    //read maximum deployment angle
+    readValue = readNextFloat();
+    if(readValue.error != error_t::GOOD) return errorOut(ERROR_Formating);
+    m_deploymentAngleLimit = readValue.data * PI / 180;
     //read dry mass
     readValue = readNextFloat();
     if(readValue.error != error_t::GOOD) return errorOut(ERROR_Formating);
@@ -108,32 +112,37 @@ result_t<float_t> FlightPlan::getAnglePartial(float_t velocity, float_t angle) c
 }
 
 result_t<float_t> FlightPlan::getTargetApogee() const{
-    if(!isLoaded()) return error_t::ERROR;
+    if(!isLoaded()) return ERROR_NotLoaded;
     return m_targetApogee;
 }
 
 result_t<float_t> FlightPlan::getMinDragArea() const{
-    if(!isLoaded()) return error_t::ERROR;
+    if(!isLoaded()) return ERROR_NotLoaded;
     return m_minimumDragArea;
 }
 
 result_t<float_t> FlightPlan::getMaxDragArea() const{
-    if(!isLoaded()) return error_t::ERROR;
+    if(!isLoaded()) return ERROR_NotLoaded;
     return m_maximumDragArea;
 }
 
+result_t<float_t> FlightPlan::getDeploymentAngleLimit() const{
+    if(!isLoaded()) return ERROR_NotLoaded;
+    return m_deploymentAngleLimit;
+}
+
 result_t<float_t> FlightPlan::getDryMass() const{
-    if(!isLoaded()) return error_t::ERROR;
+    if(!isLoaded()) return ERROR_NotLoaded;
     return m_dryMass;
 }
 
 result_t<float_t> FlightPlan::getGroundTemperature() const{
-    if(!isLoaded()) return error_t::ERROR;
+    if(!isLoaded()) return ERROR_NotLoaded;
     return m_groundLevelTemperature;
 }
 
 result_t<float_t> FlightPlan::getGroundPressure() const{
-    if(!isLoaded()) return error_t::ERROR;
+    if(!isLoaded()) return ERROR_NotLoaded;
     return m_groundLevelPressure;
 }
 

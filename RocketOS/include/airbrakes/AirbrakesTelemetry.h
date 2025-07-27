@@ -142,7 +142,7 @@ namespace Airbrakes{
 
         bool ready(){
             m_timeStamp = millis();
-            return !m_enableOverride && m_refresh > m_refreshPeriod;
+            return !m_enableOverride && m_refresh >= m_refreshPeriod;
         }
 
         void clearReady(){

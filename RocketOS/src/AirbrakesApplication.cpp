@@ -8,10 +8,10 @@ using namespace RocketOS::Shell;
 using namespace RocketOS::Simulation;
 
 
-
 Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char* logBuffer, uint_t logBufferSize, float_t* flightPlanMem, uint_t flightPlanMemSize) : 
     //program logic
     m_state(ProgramStates::Standby),
+    m_stateName(APP_STANDBY_STATE_NAME),
     m_stateTransitionSamplePeriod_ms(Airbrakes_CFG_EventDetectionSamplePeriod_ms),
     m_armFlag(false),
     m_launchDetectionParameters("launch", Airbrakes_CFG_LaunchMaximumAltitude_m, Airbrakes_CFG_LaunchMinimumVelocity_mPerS, Airbrakes_CFG_LaunchMinimumAcceleration_mPerS2, Airbrakes_CFG_LaunchMinimumSamples, Airbrakes_CFG_LaunchMinimumTime_ms),
@@ -29,6 +29,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
     m_simulationType(ObserverModes::FullSimulation),
     //telemetry systems
     m_telemetry("telemetry", m_sdCard, telemetryBuffer, telemetryBufferSize, Airbrakes_CFG_DefaultTelemetryFile, Airbrakes_CFG_TelemetryRefreshPeriod_ms,
+        DataLogSettings<const char*>{m_stateName, "State"},
         DataLogSettings<float_t>{m_observer.getPredictedAltitudeRef(), "Predicted Altitude"}, 
         DataLogSettings<float_t>{m_observer.getPredictedVerticalVelocityRef(), "Predicted Vertical Velocity"},
         DataLogSettings<float_t>{m_observer.getPredictedVerticalAccelerationRef(), "Predicted Vertical Acceleration"},
@@ -50,16 +51,16 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         DataLogSettings<float_t>{m_observer.getMeasuredOrientationRef().j, "Measured Orientation j part"},
         DataLogSettings<float_t>{m_observer.getMeasuredOrientationRef().k, "Measured Orientation k part"},
         DataLogSettings<float_t>{m_observer.getMeasuredAngleRef(), "Measured Angle to Horizontal"},
-        DataLogSettings<float_t>{m_controller.getErrorRef(), "controller error"},
-        DataLogSettings<float_t>{m_controller.getFlightPathRef(), "flight path"},
-        DataLogSettings<float_t>{m_controller.getVPartialRef(), "flght path velocity partial derivative"},
-        DataLogSettings<float_t>{m_controller.getAnglePartialRef(), "flght path angle partial derivative"},
-        DataLogSettings<float_t>{m_controller.getUpdateRuleDragRef(), "update rule drag area"},
-        DataLogSettings<float_t>{m_controller.getAdjustedDragRef(), "adjusted drag area"},
-        DataLogSettings<float_t>{m_controller.getRequestedDragRef(), "requested drag area"},
-        DataLogSettings<bool>{m_controller.getClampFlagRef(), "update rule shutdown"},
-        DataLogSettings<bool>{m_controller.getSaturationFlagRef(), "controller saturation"},
-        DataLogSettings<bool>{m_controller.getFaultFlagRef(), "controller fault"}
+        DataLogSettings<float_t>{m_controller.getErrorRef(), "Controller error"},
+        DataLogSettings<float_t>{m_controller.getFlightPathRef(), "Flight path"},
+        DataLogSettings<float_t>{m_controller.getVPartialRef(), "Flght path velocity partial derivative"},
+        DataLogSettings<float_t>{m_controller.getAnglePartialRef(), "Flght path angle partial derivative"},
+        DataLogSettings<float_t>{m_controller.getUpdateRuleDragRef(), "Update rule drag area"},
+        DataLogSettings<float_t>{m_controller.getAdjustedDragRef(), "Adjusted drag area"},
+        DataLogSettings<float_t>{m_controller.getRequestedDragRef(), "Requested drag area"},
+        DataLogSettings<bool>{m_controller.getClampFlagRef(), "Update rule shutdown"},
+        DataLogSettings<bool>{m_controller.getSaturationFlagRef(), "Controller saturation"},
+        DataLogSettings<bool>{m_controller.getFaultFlagRef(), "Controller fault"}
     ),
     m_log("log", m_sdCard, logBuffer, logBufferSize, Airbrakes_CFG_DefaultLogFile),
     m_bufferFlightTelemetry(false),
@@ -266,13 +267,15 @@ void Application::initArmed(){
         if(m_log.newFile() != error_t::GOOD) logPrint("Error: failed to create a new log file");
     }
     else logPrint("Warning: Log is in override mode");
-    logPrint("Info: Begining airbrakes arming sequence");
+    logPrint("Info: Beginning airbrakes arming sequence");
     //setup telemetry
     if(!m_telemetry.overrideEnabled()){
         if(m_telemetry.setFileMode(RocketOS::Telemetry::SDFileModes::Record)) logPrint("Error: failed to place telemetry into recording mode");
         if(m_telemetry.newFile() != error_t::GOOD) logPrint("Error: failed to create a new telemetry file");
     }
     else logPrint("Warning: Telemetry is in override mode");
+    if(m_bufferFlightTelemetry) logPrint("Info: Telemetry buffer mode is enabled");
+    else logPrint("Info: Telemetry record mode is enabled");
     //setup observer
     if(!m_HILEnabled){
         if(m_observer.setMode(ObserverModes::Sensor) != error_t::GOOD){
@@ -401,7 +404,7 @@ void Application::boostTasks(){
             m_stateTransitionCounter++;
             if(m_stateTransitionCounter >= m_launchDetectionParameters.getConsecutiveSamplesThreshold()){
                 logPrint("Info: False launch detected");
-                gotoState(ProgramStates::Armed);
+                gotoState(ProgramStates::ReArmed);
                 return;
             }
         }
@@ -594,25 +597,32 @@ void Application::gotoState(ProgramStates newState){
         default:
             initStandby();
             m_state = ProgramStates::Standby;
+            m_stateName = APP_STANDBY_STATE_NAME;
         break;
         case ProgramStates::Armed:
             initArmed();
             m_state = ProgramStates::Armed;
+            m_stateName = APP_ARMED_STATE_NAME;
         break;
         case ProgramStates::ReArmed:
             initReArmed();
+            m_state = ProgramStates::ReArmed;
+            m_stateName = APP_ARMED_STATE_NAME;
         break;
         case ProgramStates::Boost:
             initBoost();
             m_state = ProgramStates::Boost;
+            m_stateName = APP_BOOST_STATE_NAME;
         break;
         case ProgramStates::Coast:
             initCoast();
             m_state = ProgramStates::Coast;
+            m_stateName = APP_COAST_STATE_NAME;
         break;
         case ProgramStates::Recovery:
             initRecovery();
             m_state = ProgramStates::Recovery;
+            m_stateName = APP_RECOVERY_STATE_NAME;
         break;
     }
 }

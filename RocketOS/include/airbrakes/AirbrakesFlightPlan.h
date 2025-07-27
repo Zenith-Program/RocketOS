@@ -31,6 +31,7 @@ namespace Airbrakes{
             float_t m_targetApogee;
             float_t m_minimumDragArea;
             float_t m_maximumDragArea;
+            float_t m_deploymentAngleLimit;
             float_t m_dryMass;
             float_t m_groundLevelTemperature;
             float_t m_groundLevelPressure;
@@ -54,6 +55,7 @@ namespace Airbrakes{
             result_t<float_t> getTargetApogee() const;
             result_t<float_t> getMinDragArea() const;
             result_t<float_t> getMaxDragArea() const;
+            result_t<float_t> getDeploymentAngleLimit() const;
             result_t<float_t> getDryMass() const;
             result_t<float_t> getGroundTemperature() const;
             result_t<float_t> getGroundPressure() const;
