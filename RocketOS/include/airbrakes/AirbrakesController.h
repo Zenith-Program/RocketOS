@@ -3,6 +3,7 @@
 #include "AirbrakesGeneral.h"
 #include "AirbrakesFlightPlan.h"
 #include "AirbrakesObserver.h"
+#include "AirbrakesActuator.h"
 #include <IntervalTimer.h>
 
 namespace Airbrakes{
@@ -12,9 +13,10 @@ namespace Airbrakes{
             const char* const m_name;
             const FlightPlan& m_flightPlan;
             const Observer& m_observer;
+            Motor::Actuator& m_motor;
 
             //control signals
-            float_t m_error, m_flightPath, m_flightPathVelocityPartial, m_flightPathAnglePartial, m_updateRuleDragArea, m_adjustedDragArea, m_requestedDragArea;
+            float_t m_error, m_flightPath, m_flightPathVelocityPartial, m_flightPathAnglePartial, m_updateRuleDragArea, m_adjustedDragArea, m_requestedDragArea, m_currentDragArea;
 
             //state flags
             bool m_updateRuleClamped, m_isSaturated, m_fault;
@@ -28,7 +30,7 @@ namespace Airbrakes{
             bool m_isActive;
             
         public:
-            Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer, float_t decayDate);
+            Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer, Motor::Actuator& motor, float_t decayDate);
 
             RocketOS::Shell::CommandList getCommands() const;
 
@@ -51,6 +53,7 @@ namespace Airbrakes{
             const float_t& getUpdateRuleDragRef() const;
             const float_t& getAdjustedDragRef() const;
             const float_t& getRequestedDragRef() const;
+            const float_t& getCurrentDragRef() const;
 
             const bool& getClampFlagRef() const;
             const bool& getSaturationFlagRef() const;
@@ -63,7 +66,11 @@ namespace Airbrakes{
             float_t airDensity(float_t altitude) const;
             float_t updateRule(float_t error, float_t verticalVelocity, float_t angle, float_t altitude, float_t velocityPartial, float_t anglePartial) const;
             float_t getBestPossibleDragArea(float_t dragArea, float_t error) const;
+            result_t<float_t> convertDragAreaToMotorPosition(float_t) const;
+            result_t<float_t> convertMotorPositionToDragArea(float_t) const;
             error_t newFlight();
+
+            static float_t sinSquared(float_t);
         private:
             // ######### command structure #########
             using Command = RocketOS::Shell::Command;

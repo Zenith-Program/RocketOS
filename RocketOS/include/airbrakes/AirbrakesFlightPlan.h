@@ -91,6 +91,7 @@ namespace Airbrakes{
                         if(isLoaded()){
                              Serial.printf("Flight plan '%s':\n", m_fileName.data());
                              Serial.printf("Target apogee: %.2fm\n", m_targetApogee);
+                             Serial.printf("Deployment range: 0 degrees - %.2f degrees\n", m_deploymentAngleLimit * 180 / PI);
                              Serial.printf("Effective drag area range: %.4fm^2 - %.4fm^2\n", m_minimumDragArea, m_maximumDragArea);
                              Serial.printf("Dry mass: %.2fkg\n", m_dryMass);
                              Serial.printf("Launch site conditions: %.2fC at %.2fpa\n", m_groundLevelTemperature - 273.15, m_groundLevelPressure);

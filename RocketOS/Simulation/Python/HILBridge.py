@@ -69,6 +69,9 @@ simulink_to_target = None
 simulink_to_target_new = False
 user_commands = queue.Queue()
 
+flush_lock = threading.Lock()
+flush_requested = True
+
 # === EXIT EVENT ===
 stop_event = threading.Event()
 
@@ -88,13 +91,13 @@ if not stop_event.is_set():
 
     udp_send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-
 # === THREAD FUNCTIONS ===
 
 def serial_read_thread():
     # Reads from Target and routes HIL or shell responses
     buffer = ""
     while not stop_event.is_set():
+        
         try:
             data = ser.read(ser.in_waiting or 1).decode('utf-8', errors='ignore')
             buffer += data
@@ -153,6 +156,16 @@ def serial_write_thread():
 def simulink_receive_thread():
     # Receives UDP packets from Simulink and pushes to Target
     while not stop_event.is_set():
+        do_flush = False
+        with flush_lock:
+            global flush_requested
+            if(flush_requested):
+                do_flush = True
+                flush_requested = False
+        if(do_flush):
+            #clear_rx_socket()
+            print
+            continue
         try:
             data, _ = udp_recv_sock.recvfrom(8 * SIM_TO_TARGET_COUNT)
             if len(data) != 8 * SIM_TO_TARGET_COUNT:
@@ -201,11 +214,27 @@ def user_input_thread():
             cmd = cmd.strip()
             if(cmd == "quit" or cmd == "exit"):
                 stop_event.set()
-            else:
-                user_commands.put(cmd)
+            else: 
+                if(cmd == "flush"):
+                    with flush_lock:
+                        global flush_requested
+                        flush_requested = True
+                else:
+                    user_commands.put(cmd)
         except Exception as e:
             print(f"[ERROR] Input thread: {e}")
             stop_event.set()
+
+def clear_rx_socket():
+    udp_recv_sock.setblocking(False)
+    try:
+        while True:
+            udp_recv_sock.recvfrom(4096)
+    except BlockingIOError:
+        pass
+    finally:
+        udp_recv_sock.setblocking(True)
+        udp_recv_sock.settimeout(0.1)
 
 # === START THREADS ===
 if not stop_event.is_set():

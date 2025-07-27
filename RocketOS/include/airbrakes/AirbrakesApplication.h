@@ -82,6 +82,7 @@ namespace Airbrakes{
             float_t,        //controller update rule drag
             float_t,        //controller adjusted drag
             float_t,        //controller requested drag
+            float_t,        //current drag area from motor position
             bool,           //controller update rule clamp flag
             bool,           //controller saturation flag
             bool            //controller fault flag
@@ -131,7 +132,8 @@ namespace Airbrakes{
         // --- HIL systems ---
 #ifndef NO_TX_HIL
         RocketOS::Simulation::TxHIL<
-            float_t,    //drag area
+            float_t,    //current drag area
+            float_t,    //requested drag area
             float_t,    //flight path
             float_t,    //error
             float_t,    //update rule drag
@@ -275,7 +277,7 @@ namespace Airbrakes{
                 //list of subcommands
                 const std::array<CommandList, 7> c_flightSubCommands{
                     CommandList{"buffer", c_flightBufferCommands.data(), c_flightBufferCommands.size(), nullptr, 0},
-                    CommandList{"actuate", c_flightActuateCommands.data(), c_flightActuateCommands.size(), nullptr, 0},
+                    CommandList{"actuators", c_flightActuateCommands.data(), c_flightActuateCommands.size(), nullptr, 0},
                     CommandList{"sample", c_flightSampleCommands.data(), c_flightSampleCommands.size(), nullptr, 0},
                     m_launchDetectionParameters.getCommands(), 
                     m_burnoutDetectionParameters.getCommands(), 

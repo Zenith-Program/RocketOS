@@ -23,7 +23,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
     m_actuator("motor"),
     m_actuateInFlight(true),
     //control syatems
-    m_controller("controller", 100000, m_flightPlan, m_observer, Airbrakes_CFG_DecayRate),
+    m_controller("controller", 100000, m_flightPlan, m_observer, m_actuator, Airbrakes_CFG_DecayRate),
     m_flightPlan("plan", m_sdCard, flightPlanMem, flightPlanMemSize, Airbrakes_CFG_DefaultFlightPlanFileName),
     m_observer(m_imu, m_altimeter),
     m_simulationType(ObserverModes::FullSimulation),
@@ -58,6 +58,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
         DataLogSettings<float_t>{m_controller.getUpdateRuleDragRef(), "Update rule drag area"},
         DataLogSettings<float_t>{m_controller.getAdjustedDragRef(), "Adjusted drag area"},
         DataLogSettings<float_t>{m_controller.getRequestedDragRef(), "Requested drag area"},
+        DataLogSettings<float_t>{m_controller.getCurrentDragRef(), "Current drag area"},
         DataLogSettings<bool>{m_controller.getClampFlagRef(), "Update rule shutdown"},
         DataLogSettings<bool>{m_controller.getSaturationFlagRef(), "Controller saturation"},
         DataLogSettings<bool>{m_controller.getFaultFlagRef(), "Controller fault"}
@@ -105,6 +106,7 @@ Application::Application(char* telemetryBuffer, uint_t telemetryBufferSize, char
     //simulation systems
 #ifndef NO_TX_HIL
     m_TxHIL(
+        m_controller.getCurrentDragRef(),
         m_controller.getRequestedDragRef(),
         m_controller.getFlightPathRef(),
         m_controller.getErrorRef(),

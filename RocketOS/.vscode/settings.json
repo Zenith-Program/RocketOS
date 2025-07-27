@@ -10,6 +10,7 @@
         "initializer_list": "cpp",
         "new": "cpp",
         "tuple": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "cmath": "cpp"
     }
 }

@@ -124,7 +124,7 @@ error_t Actuator::setActuatorLimit(float_t lim){
 }
 
 float_t Actuator::getCurrentDeployment(){
-    return getUnitDeploymentFromEncoderPosition(abs(m_encoder.read()));
+    return getUnitDeploymentFromEncoderPosition(m_encoder.read());
 }
 
 bool Actuator::onTarget(){

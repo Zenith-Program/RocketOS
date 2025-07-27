@@ -10,8 +10,8 @@ using namespace Airbrakes::Controls;
 #define MOLAR_MASS_OF_DRY_AIR 0.0289652     //unit: kg/mol
 
 
-Controller::Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer, float_t decayRate) : 
-    m_name(name), m_flightPlan(plan), m_observer(observer), m_fault(false), m_decayRate(decayRate), m_updateRuleShutdownVelocity(0), m_clockPeriod(clockPeriod), m_isActive(false){}
+Controller::Controller(const char* name, uint_t clockPeriod, const FlightPlan& plan, const Observer& observer, Motor::Actuator& motor, float_t decayRate) : 
+    m_name(name), m_flightPlan(plan), m_observer(observer), m_motor(motor), m_fault(false), m_decayRate(decayRate), m_updateRuleShutdownVelocity(0), m_clockPeriod(clockPeriod), m_isActive(false){}
 
 RocketOS::Shell::CommandList Controller::getCommands() const{
     return {"controller", c_rootCommands.data(), c_rootCommands.size(), c_rootChildren.data(), c_rootChildren.size()};
@@ -31,6 +31,9 @@ error_t Controller::start(){
 void Controller::stop(){
     m_clock.end();
     m_isActive = false;
+    //set these for simulation
+    m_currentDragArea = m_flightPlan.getMinDragArea();
+    m_requestedDragArea = m_flightPlan.getMinDragArea();
 }
 
 void Controller::resetInit(){
@@ -42,13 +45,14 @@ bool Controller::isActive(){
 }
 
 void Controller::clock(){
+    //clear fault flag
+    m_fault = false;
     //read current state from the observer
     float_t currentAltitude = m_observer.getAltitude();
     float_t currentVerticalVelocity = m_observer.getVeritcalVelocity();
     float_t currentAngle = m_observer.getAngleToHorizontal();
     //get flight path parameters from flight plan
     if(!m_flightPlan.isLoaded()){
-        if(m_fault == false);//log error
         m_fault = true;
     }
     m_flightPath = m_flightPlan.getAltitude(currentVerticalVelocity, currentAngle);
@@ -63,10 +67,17 @@ void Controller::clock(){
         m_updateRuleDragArea = updateRule(m_error, currentVerticalVelocity, currentAngle, currentAltitude, m_flightPathVelocityPartial, m_flightPathAnglePartial);
     }
     //fine tune deployment with accumulator
-    m_adjustedDragArea = m_updateRuleDragArea;
+    m_adjustedDragArea = m_updateRuleDragArea; //not implemented
     //limit control input to the physical range of the actuators
     m_requestedDragArea = getBestPossibleDragArea(m_adjustedDragArea, m_error);
     m_isSaturated = (m_requestedDragArea != m_adjustedDragArea);
+    //exchange info with the motor
+    result_t<float_t> result = convertMotorPositionToDragArea(m_motor.getCurrentDeployment());
+    if(result.error != error_t::GOOD) m_fault = true;
+    m_currentDragArea = result;
+    result = convertDragAreaToMotorPosition(m_requestedDragArea);
+    if(result.error != error_t::GOOD) m_fault = true;
+    m_motor.setTargetDeployment(convertDragAreaToMotorPosition(m_requestedDragArea));
 }
 
 //helpers
@@ -92,6 +103,22 @@ float_t Controller::getBestPossibleDragArea(float_t dragArea, float_t error) con
     return m_flightPlan.getMinDragArea();
 }
 
+result_t<float_t> Controller::convertDragAreaToMotorPosition(float_t dragArea) const{
+    if(dragArea == m_flightPlan.getMinDragArea()) return 0;
+    if(dragArea == m_flightPlan.getMaxDragArea()) return 1;
+    if(dragArea < m_flightPlan.getMinDragArea()) return {0, error_t::ERROR};
+    if(dragArea > m_flightPlan.getMaxDragArea()) return {1, error_t::ERROR};
+    return asin(sqrt((dragArea - m_flightPlan.getMinDragArea()) * sinSquared(m_flightPlan.getDeploymentAngleLimit()) / (m_flightPlan.getMaxDragArea() - m_flightPlan.getMinDragArea()))) / m_flightPlan.getDeploymentAngleLimit();
+}
+
+result_t<float_t> Controller::convertMotorPositionToDragArea(float_t position) const{
+    if(position == 0) return m_flightPlan.getMinDragArea();
+    if(position == 1) return m_flightPlan.getMaxDragArea();
+    if(position > 1) return {m_flightPlan.getMaxDragArea(), error_t::ERROR};
+    if(position < 0) return {m_flightPlan.getMinDragArea(), error_t::ERROR};
+    return m_flightPlan.getMinDragArea() + sinSquared(position * m_flightPlan.getDeploymentAngleLimit()) / sinSquared(m_flightPlan.getDeploymentAngleLimit()) * (m_flightPlan.getMaxDragArea() - m_flightPlan.getMinDragArea());
+}
+
 error_t Controller::newFlight(){
     if(!m_flightPlan.isLoaded()) return error_t::ERROR;
     m_updateRuleClamped = false;
@@ -100,6 +127,10 @@ error_t Controller::newFlight(){
     return error_t::GOOD;
 }
 
+float_t Controller::sinSquared(float_t x){
+    float_t s = sin(x);
+    return s * s;
+}
 //references
 uint_t& Controller::getClockPeriodRef(){
     return m_clockPeriod;
@@ -134,6 +165,10 @@ const float_t& Controller::getAdjustedDragRef() const{
 
 const float_t& Controller::getRequestedDragRef() const{
     return m_requestedDragArea;
+}
+
+const float_t& Controller::getCurrentDragRef() const{
+    return m_currentDragArea;
 }
 
 
