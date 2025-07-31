@@ -308,6 +308,22 @@ xlabel('Vertical Velocity (m/s)');
 ylabel("Angle (degrees)");
 zlabel("Altitude (m)");
 
+%just flight plan mesh
+figure(5)
+clf
+hold on
+s = surface(lowerPathVelocities, lowerPathAngles * 180/pi, centerPathAltitudes);
+s.EdgeColor = 'k';
+s.FaceColor = 'g';
+scatter3(0,0,TargetApogee, 'filled' ,'k');
+text(0,0,TargetApogee, "Target Apogee");
+title("Airbrakes Flight Plan");
+xlabel('Vertical Velocity (m/s)');
+ylabel("Angle (degrees)");
+zlabel("Altitude (m)");
+hold off
+zlim([0,900])
+
 SimGradVMesh = SimGradVMesh(end:-1:1, end:-1:1)';
 SimGradAngleMesh = SimGradAngleMesh(end:-1:1, end:-1:1)';
 
