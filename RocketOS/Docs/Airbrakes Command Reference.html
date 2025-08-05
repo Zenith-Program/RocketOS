@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Airbrakes Command Line Interface Reference Guide</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        details {
+            margin-left: 20px;
+        }
+        summary {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .description {
+            margin-left: 20px;
+            color: #555;
+        }
+        .hidden {
+            display: none;
+        }
+        .highlight {
+            background-color: yellow;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+        button {
+            margin-right: 10px;
+            padding: 5px 10px;
+        }
+	table {
+    		border-collapse: collapse;
+    		margin: 15px 0;
+    		width: 100%;
+    		max-width: 800px;
+	}
+	table, th, td {
+    		border: 1px solid #ccc;
+	}
+	th, td {
+    		padding: 8px 12px;
+    		text-align: left;
+	}
+	th {
+    		background-color: #f0f0f0;
+	}
+    </style>
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+    <h1>Airbrakes Command Line Interface Reference Guide</h1>
+
+    <div id="root-description"></div>
+
+    <div id="controls">
+        <button id="expandAllBtn">Expand All</button>
+        <button id="collapseAllBtn">Collapse All</button><br><br>
+        <input type="text" id="searchBox" placeholder="Search commands...">
+    </div>
+
+    <div id="cli-tree"></div>
+
+    <!-- Scripts Below -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        const tree = {
+            "description": "This document explains how to use the airbrakes command line interface and provides a description of each available command.\n## Command Structure\nAll commands are prefixed with the **>** character. This is done to distinguish them from simulation data or other transmissions. Without the **>** character, the command interpreter will **ignore** the transmission.\nA **<** character is printed by the command interpreter following the completion of a command's execution. If the **<** character does not appear after a command is sent, it is likely that the device is in an unresponsive state.\n```\n>command\n<\n```\nCommands are organized into a tree structure which works in a way that is very similar to a file system. Commands may contain zero or more other commands, called subcommands, which are acessed by writing the base command followed by the subcommand.\nIf a command has one or more subcommands are also called directories. If a command is a directory (has subcommands), it does not have to be executable. Some directories are executable, others are not. \n```\n>baseCommand subCommand1\nThis is subcommand 1\n<\n\n>baseCommand directory1 subCommand2\nThis is subcommand 2\n<\n>baseCommand directory1\n<[Cmd:error] No default command exists for 'directory1' directory\n```\nCommands may have zero or more arguments, which are values provided by the user that are used in the execution of the command. Arguments are placed after the command name and are separated by whitespace if there are multiple.\n```\n>command 5 -3\n<\n\n>command subCommand 0.75\n<\n```\nThere are five types of arguments that commands may require. A command will not be executed if the number or type of arguments provided to it are incorrect.\n### Argument Types Table:\n\n| Type             | Symbol | Description                                        | Examples                        | Non-Examples                    |\n|------------------|--------|----------------------------------------------------|----------------------------------|----------------------------------|\n| integer          | i      | positive or negative number                       | -2, 4, 29                       | 2.5, 0b000101, 0xFF, name, \"-5\"  |\n| unsigned | u      | non-negative number; hexadecimal and binary ok    | 0, 12, 0xAb01, 0b01101          | -5, 0.26, name, \"6\"              |\n| float            | f      | positive or negative decimal number               | 0.25, -1.75, 12                 | 0xFF, name, \"0.75\"               |\n| word             | w      | text containing no whitespace                     | name, 0.5, 7, -6                | \"string data\"                    |\n| string           | s      | sequence of characters enclosed in quotes         | \"string data\", \"0.75\"           | 5, name                         |\n## Navigation Commands\nCommands that have subcommands are also called directories. The working directory is the directory whose subcommands are treated as the base commands. By default, the working directory will be set to the \"root\" directory, which is the root of the tree structure containing all of the commands. The working directory can be changed to any other directory in the command structure. There are a few builtin commands which are used to navigate the directories. These are called navigation commands.\n### Navigation Commands Table\n\n| Name             | Grammar | Description                                        |\n|------------------|--------|----------------------------------------------------|\n| cd          | suffix      | change the working directory                         |\n| wd | constituent      | print the working directory    |\n| rd            | constituent      | return the working directory to the root directory               |\n| ls             | suffix      | print all commands in the directory                     |\n| lsr           | suffix      | print all commands and subcommands in the directory         |\n\nNavigation commands can have constituent or suffix gramar, meaning that their usage is not identical. Navigation commands with constituent grammar are used like regular commands. They are written imideatly afther the **>** character and have no arguments or subcommands. The following example shows how to identify the working directory with **wd** and return to the root directory with **rd**.\n```\n>wd\nsomeDirectory\n<\n\n>rd\n<\n\n>wd\nroot\n<\n```\nNavigation commands with suffix grammar are used in combination with a directory, which is written before the navigation command. They also do not have any arguments or subcommands. The following example demonstrates the usage the navigation command **cd**, which has suffix grammar. \n```\n>baseCommand cd\n>\n\n>wd\nbaseCommand\n<\n\n>subcommand cd\n<\n\n>wd\nsubcommand\n<\n\n>rd\n<\n\n>baseCommand subcommand cd\n<\n\n>wd\nsubcommand\n<\n```\nThe navigation commands **ls** and **lsr** are used to print the subcommands of a directory. When printed, the arguments of each command are enclosed in braces **{}**. Directories are indicated with square brackets **[]**. If a directory is not executable, it will not have braces **{}**. The command **ls** only prints base commands of the prefixed directory. Any directories in the prefixed directory are displayed with **[...]** to signify that they have subcommands that are not shown. The command **lsr** expands the brackets and prints all subcommads recursively, with an increace in indentation for each level. Navigation commands are always acessable, but are not shown when using **ls** or **lsr**.\n```\n>lsr\nCommand1 [\n    Command1.1 {}\n    Command1.2 {s}\n]\nCommand2 {u} [\n    Command2.1 {f}\n    Command2.2 {} [\n        Command2.2.1 {i}\n    ]\n]\n<\n\n>ls\nCommand1 [...]\nCommand2 {u} [...]\n<\n\n>Command1 ls\nCommand1.1 {}\nCommand1.2 {s}\n<\n\n>Command2 cd\n<\n\n>lsr\nCommand2.1 {f}\nCommand2.2 {} [\n    Command2.2.1 {i}\n]\n<\n```\n## Airbrakes Command Dictionary",
+            "children": {
+                "status": "Displays **current system status**:\n\n- Position\n- Velocity\n- PID State",
+                "configure": {
+                    "description": "Commands to configure system parameters like:\n\n- PID Gains\n- Actuator Limits\n- Sampling Rates",
+                    "children": {
+                        "pid": "Adjust PID gains (`Kp`, `Ki`, `Kd`).",
+                        "limits": "Set actuator extension limits.",
+                        "sampling": "Set control loop sampling rate."
+                    }
+                },
+                "test": "Run actuator **test routines**:\n\n- Manual extension\n- Manual retraction"
+            }
+        };
+
+        const rootDescriptionContainer = document.getElementById('root-description');
+        const treeContainer = document.getElementById('cli-tree');
+
+        // Render Root Description using Markdown
+        if (tree.description) {
+            rootDescriptionContainer.innerHTML = marked.parse(tree.description);
+            rootDescriptionContainer.className = 'description';
+        }
+
+        // Build Tree Function
+        function buildTree(node) {
+            const fragment = document.createDocumentFragment();
+            for (const key in node) {
+                const value = node[key];
+                const details = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.textContent = key;
+                details.appendChild(summary);
+
+                if (typeof value === 'string') {
+                    const desc = document.createElement('div');
+                    desc.innerHTML = marked.parse(value);
+                    desc.className = 'description';
+                    details.appendChild(desc);
+                } else if (typeof value === 'object') {
+                    if (value.description) {
+                        const desc = document.createElement('div');
+                        desc.innerHTML = marked.parse(value.description);
+                        desc.className = 'description';
+                        details.appendChild(desc);
+                    }
+                    if (value.children) {
+                        details.appendChild(buildTree(value.children));
+                    }
+                }
+
+                fragment.appendChild(details);
+            }
+            return fragment;
+        }
+
+        // Render Tree Children
+        if (tree.children) {
+            treeContainer.appendChild(buildTree(tree.children));
+        }
+
+        // Search & Expand/Collapse Functionality
+        const searchBox = document.getElementById('searchBox');
+
+        searchBox.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const detailsElements = treeContainer.querySelectorAll('details');
+
+            // Reset all nodes
+            detailsElements.forEach(d => {
+                d.classList.remove('hidden');
+                d.open = false;
+                d.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+            });
+
+            if (query === '') {
+                return;
+            }
+
+            detailsElements.forEach(details => {
+                const summary = details.querySelector('summary');
+                const desc = details.querySelector('.description');
+
+                let matches = false;
+
+                if (summary && summary.textContent.toLowerCase().includes(query)) {
+                    summary.classList.add('highlight');
+                    matches = true;
+                }
+
+                if (desc && desc.textContent.toLowerCase().includes(query)) {
+                    highlightMatches(desc, query);
+                    matches = true;
+                }
+
+                if (matches) {
+                    let current = details;
+                    while (current && current.tagName === 'DETAILS') {
+                        current.open = true;
+                        current = current.parentElement.closest('details');
+                    }
+                } else {
+                    if (!hasMatchingDescendant(details, query)) {
+                        details.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        function hasMatchingDescendant(details, query) {
+            const summaries = details.querySelectorAll('summary');
+            const descriptions = details.querySelectorAll('.description');
+            for (const s of summaries) {
+                if (s.textContent.toLowerCase().includes(query)) return true;
+            }
+            for (const d of descriptions) {
+                if (d.textContent.toLowerCase().includes(query)) return true;
+            }
+            return false;
+        }
+
+        function highlightMatches(element, query) {
+            const textNodes = Array.from(element.childNodes).filter(n => n.nodeType === 3);
+            textNodes.forEach(node => {
+                const regex = new RegExp(`(${query})`, 'gi');
+                const parts = node.textContent.split(regex);
+                if (parts.length > 1) {
+                    const fragment = document.createDocumentFragment();
+                    parts.forEach(part => {
+                        if (part.toLowerCase() === query) {
+                            const highlightSpan = document.createElement('span');
+                            highlightSpan.className = 'highlight';
+                            highlightSpan.textContent = part;
+                            fragment.appendChild(highlightSpan);
+                        } else {
+                            fragment.appendChild(document.createTextNode(part));
+                        }
+                    });
+                    node.parentNode.replaceChild(fragment, node);
+                }
+            });
+        }
+
+        // Expand/Collapse All Buttons
+        document.getElementById('expandAllBtn').addEventListener('click', () => {
+            const detailsElements = treeContainer.querySelectorAll('details');
+            detailsElements.forEach(d => d.open = true);
+        });
+
+        document.getElementById('collapseAllBtn').addEventListener('click', () => {
+            const detailsElements = treeContainer.querySelectorAll('details');
+            detailsElements.forEach(d => d.open = false);
+        });
+    </script>
+</body>
