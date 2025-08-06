@@ -73,7 +73,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         const tree = {
-            "description": "This document explains how to use the airbrakes command line interface and provides a description of each available command.\n## Command Structure\nAll commands are prefixed with the **>** character. This is done to distinguish them from simulation data or other transmissions. Without the **>** character, the command interpreter will **ignore** the transmission.\nA **<** character is printed by the command interpreter following the completion of a command's execution. If the **<** character does not appear after a command is sent, it is likely that the device is in an unresponsive state.\n```\n>command\n<\n```\nCommands are organized into a tree structure which works in a way that is very similar to a file system. Commands may contain zero or more other commands, called subcommands, which are acessed by writing the base command followed by the subcommand.\nIf a command has one or more subcommands are also called directories. If a command is a directory (has subcommands), it does not have to be executable. Some directories are executable, others are not. \n```\n>baseCommand subCommand1\nThis is subcommand 1\n<\n\n>baseCommand directory1 subCommand2\nThis is subcommand 2\n<\n>baseCommand directory1\n<[Cmd:error] No default command exists for 'directory1' directory\n```\nCommands may have zero or more arguments, which are values provided by the user that are used in the execution of the command. Arguments are placed after the command name and are separated by whitespace if there are multiple.\n```\n>command 5 -3\n<\n\n>command subCommand 0.75\n<\n```\nThere are five types of arguments that commands may require. A command will not be executed if the number or type of arguments provided to it are incorrect.\n### Argument Types Table:\n\n| Type             | Symbol | Description                                        | Examples                        | Non-Examples                    |\n|------------------|--------|----------------------------------------------------|----------------------------------|----------------------------------|\n| integer          | i      | positive or negative number                       | -2, 4, 29                       | 2.5, 0b000101, 0xFF, name, \"-5\"  |\n| unsigned | u      | non-negative number; hexadecimal and binary ok    | 0, 12, 0xAb01, 0b01101          | -5, 0.26, name, \"6\"              |\n| float            | f      | positive or negative decimal number               | 0.25, -1.75, 12                 | 0xFF, name, \"0.75\"               |\n| word             | w      | text containing no whitespace                     | name, 0.5, 7, -6                | \"string data\"                    |\n| string           | s      | sequence of characters enclosed in quotes         | \"string data\", \"0.75\"           | 5, name                         |\n## Navigation Commands\nCommands that have subcommands are also called directories. The working directory is the directory whose subcommands are treated as the base commands. By default, the working directory will be set to the \"root\" directory, which is the root of the tree structure containing all of the commands. The working directory can be changed to any other directory in the command structure. There are a few builtin commands which are used to navigate the directories. These are called navigation commands.\n### Navigation Commands Table\n\n| Name             | Grammar | Description                                        |\n|------------------|--------|----------------------------------------------------|\n| cd          | suffix      | change the working directory                         |\n| wd | constituent      | print the working directory    |\n| rd            | constituent      | return the working directory to the root directory               |\n| ls             | suffix      | print all commands in the directory                     |\n| lsr           | suffix      | print all commands and subcommands in the directory         |\n\nNavigation commands can have constituent or suffix gramar, meaning that their usage is not identical. Navigation commands with constituent grammar are used like regular commands. They are written imideatly afther the **>** character and have no arguments or subcommands. The following example shows how to identify the working directory with **wd** and return to the root directory with **rd**.\n```\n>wd\nsomeDirectory\n<\n\n>rd\n<\n\n>wd\nroot\n<\n```\nNavigation commands with suffix grammar are used in combination with a directory, which is written before the navigation command. They also do not have any arguments or subcommands. The following example demonstrates the usage the navigation command **cd**, which has suffix grammar. \n```\n>baseCommand cd\n>\n\n>wd\nbaseCommand\n<\n\n>subcommand cd\n<\n\n>wd\nsubcommand\n<\n\n>rd\n<\n\n>baseCommand subcommand cd\n<\n\n>wd\nsubcommand\n<\n```\nThe navigation commands **ls** and **lsr** are used to print the subcommands of a directory. When printed, the arguments of each command are enclosed in braces **{}**. Directories are indicated with square brackets **[]**. If a directory is not executable, it will not have braces **{}**. The command **ls** only prints base commands of the prefixed directory. Any directories in the prefixed directory are displayed with **[...]** to signify that they have subcommands that are not shown. The command **lsr** expands the brackets and prints all subcommads recursively, with an increace in indentation for each level. Navigation commands are always acessable, but are not shown when using **ls** or **lsr**.\n```\n>lsr\nCommand1 [\n    Command1.1 {}\n    Command1.2 {s}\n]\nCommand2 {u} [\n    Command2.1 {f}\n    Command2.2 {} [\n        Command2.2.1 {i}\n    ]\n]\n<\n\n>ls\nCommand1 [...]\nCommand2 {u} [...]\n<\n\n>Command1 ls\nCommand1.1 {}\nCommand1.2 {s}\n<\n\n>Command2 cd\n<\n\n>lsr\nCommand2.1 {f}\nCommand2.2 {} [\n    Command2.2.1 {i}\n]\n<\n```\n## Airbrakes Command Dictionary",
+            "description": "This document explains how to use the airbrakes command line interface and provides a description of each available command.\n## Command Structure\nAll commands are prefixed with the **>** character. This is done to distinguish them from simulation data or other transmissions. Without the **>** character, the command interpreter will **ignore** the transmission.\nA **<** character is printed by the command interpreter following the completion of a command's execution. If the **<** character does not appear after a command is sent, it is likely that the device is in an unresponsive state.\n```\n>command\n<\n```\nCommands are organized into a tree structure which works in a way that is very similar to a file system. Commands may contain zero or more other commands, called subcommands, which are acessed by writing the base command followed by the subcommand.\nIf a command has one or more subcommands it is also called a directory. Some directories are only used to acess their subcommands and cannot be called directly. Directories which can be called directly are said to have a default command. If you try to execute a directory which does not have a default command, an error will occur. \n```\n>baseCommand subCommand1\nThis is subcommand 1\n<\n\n>baseCommand directory1 subCommand2\nThis is subcommand 2\n<\n>baseCommand directory1\n<[Cmd:error] No default command exists for 'directory1' directory\n```\nCommands may have zero or more arguments, which are values provided by the user that are used in the execution of the command. Arguments are placed after the command name and are separated by whitespace if there are multiple.\n```\n>command 5 -3\n<\n\n>command subCommand 0.75\n<\n```\nThere are five types of arguments that commands may require. A command will not be executed if the number or type of arguments provided to it are incorrect.\n### Argument Types Table:\n\n| Type             | Symbol | Description                                        | Examples                        | Non-Examples                    |\n|------------------|--------|----------------------------------------------------|----------------------------------|----------------------------------|\n| integer          | i      | positive or negative number                       | -2, 4, 29                       | 2.5, 0b000101, 0xFF, name, \"-5\"  |\n| unsigned | u      | non-negative number; hexadecimal and binary ok    | 0, 12, 0xAb01, 0b01101          | -5, 0.26, name, \"6\"              |\n| float            | f      | positive or negative decimal number               | 0.25, -1.75, 12                 | 0xFF, name, \"0.75\"               |\n| word             | w      | text containing no whitespace                     | name, 0.5, 7, -6                | \"string data\"                    |\n| string           | s      | sequence of characters enclosed in quotes         | \"string data\", \"0.75\"           | 5, name                         |\n## Navigation Commands\nThe working directory is the directory whose subcommands are treated as the base commands. By default, the working directory will be set to the \"root\" directory, which is the root of the tree structure containing all of the commands. The working directory can be changed to any other directory in the command structure. There are a few builtin commands which are used to navigate the directories. These are called navigation commands.\n### Navigation Commands Table\n\n| Name             | Grammar | Description                                        |\n|------------------|--------|----------------------------------------------------|\n| cd          | suffix      | change the working directory                         |\n| wd | constituent      | print the working directory    |\n| rd            | constituent      | return the working directory to the root directory               |\n| ls             | suffix      | print all commands in the directory                     |\n| lsr           | suffix      | print all commands and subcommands in the directory         |\n\nNavigation commands can have constituent or suffix gramar, meaning that their usage is not identical. Navigation commands with constituent grammar are used like regular commands. They are written imideatly afther the **>** character and have no arguments or subcommands. The following example shows how to identify the working directory with **wd** and return to the root directory with **rd**.\n```\n>wd\nsomeDirectory\n<\n\n>rd\n<\n\n>wd\nroot\n<\n```\nNavigation commands with suffix grammar are used in combination with a directory, which is written before the navigation command. They also do not have any arguments or subcommands. The following example demonstrates the usage the navigation command **cd**, which has suffix grammar. \n```\n>baseCommand cd\n>\n\n>wd\nbaseCommand\n<\n\n>subcommand cd\n<\n\n>wd\nsubcommand\n<\n\n>rd\n<\n\n>baseCommand subcommand cd\n<\n\n>wd\nsubcommand\n<\n```\nThe navigation commands **ls** and **lsr** are used to print the subcommands of a directory. When printed, the arguments of each command are enclosed in braces **{}**. Directories are indicated with square brackets **[]**. If a directory has no default command, it will not have braces **{}**. The command **ls** only prints base commands of the prefixed directory. Any directories in the prefixed directory are displayed with **[...]** to signify that they have subcommands that are not shown. The command **lsr** expands the brackets and prints all subcommads recursively, with an increace in indentation for each level. Navigation commands are always acessable, but are not shown when using **ls** or **lsr**.\n```\n>lsr\nCommand1 [\n    Command1.1 {}\n    Command1.2 {s}\n]\nCommand2 {u} [\n    Command2.1 {f}\n    Command2.2 {} [\n        Command2.2.1 {i}\n    ]\n]\n<\n\n>ls\nCommand1 [...]\nCommand2 {u} [...]\n<\n\n>Command1 ls\nCommand1.1 {}\nCommand1.2 {s}\n<\n\n>Command2 cd\n<\n\n>lsr\nCommand2.1 {f}\nCommand2.2 {} [\n    Command2.2.1 {i}\n]\n<\n```\n## Airbrakes Command Dictionary\nHere is a dictionary containing a listing and description for each command in the airbrakes software as of August 2025. The dictionary's structure mirrors that of the actual command structure, with directories represented by collapsible menus. The search bar can be used to lookup commands, which will be hilighted if they match, or to search for keyword matches in commands or their descriptions.",
             "children": {
                 "arm": "Places the system into the armed state. This command is used to start both real and simulated flights. After arming, a series of information, warning, and error messages will appear. These messages are also logged to the sd card if logging is enabled. Do not launch if there are any warnings or error messages, unless you know what you are doing.\n\n**Arguments:** None",
 		"disarm": "Disarms the system and ends any real or simulated flight. Use this command after recovering the system to ensure all data is saved correctly. This command will stop the controller, motor, telemetry, and event detection.\n\n**Arguments:** None",
@@ -100,256 +100,258 @@
 			"sample": {
 				"description": "This directory is for the sample parameter, which controls the rate at which the event detection system samples the vehicles state. This parameter can be used to tune the event detection system. The sample parameter is the time in millisecods between checks made by the event detection system. A shorter sample period gives quicker response, but is more suceptable to noise or error.\n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the current sample period of the event detection system.\n\n**Arguments:** None\n### Subcommands",
                     		"children": {
-					"set": "Changes the sample period of the event detection system.\n\n**Arguments:** *Unisgned* - New value in milliseconds"
+					"set": "Changes the sample period of the event detection system.\n\n**Arguments:** *unisgned* - New value in milliseconds"
 				}
 			},
 			"launch":{
-				"description": "This directory is for the launch event detection parameters. The vehicle's altitude, vertical velocity, and acceleration must all meet a threshold in consecutive samples for a launch event to occur. The threshold values and number of consectve samples are parameters that can be acessed through this directory.\n### Subcommands",
+				"description": "This directory is for the launch detection system. The vehicle's altitude, vertical velocity, and acceleration must all meet a threshold in consecutive samples for a launch to be detected. Additionally, minimum arm state time can also be applied. The threshold values, number of consectve samples, and state transition timing are parameters that can be acessed through this directory.\n### Subcommands",
                     		"children": {
-					"properties": "Prints all launch event detection parameters.\n\n**Arguments:** None",
+					"properties": "Prints all launch detection system parameters.\n\n**Arguments:** None",
 					"altitude":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the altitude threshold parameter of the launch detection system. The vehicle's altitude must be **above** this threshold for a launch to be detected. Altitude is measured using the barometric altimeter. This value uses meters as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the launch detection system's altitude threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the launch detection system's altitude threshold.\n\n**Arguments:** *float* - New value in meters"
 						}
 					},
 					"velocity":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the vertical velocity threshold parameter of the launch detection system. The vehicle's vertical velocity must be **above** this threshold for a launch to be detected. Vertical velocity is measured by differentiating altitude readings from the altimeter. This value uses meters per second as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the launch detection system's vertical velocity threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the launch detection system's vertical velocity threshold.\n\n**Arguments:** *float* - New value in meters per second"
 						}
 					},
 					"acceleration":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the vertical acceleration threshold parameter of the launch detection system. The vehicle's vertical acceleration must be **above** this threshold for a launch to be detected. Vertical acceleration is measured using accelerometer readings from the IMU. This value uses meters per second squared as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the launch detection system's vertical acceleration threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the launch detection system's vertical acceleration threshold.\n\n**Arguments:** *float* - New value in meters per second squared"
 						}
 					},
 					"samples":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the consecutive samples parameter of the launch detection system. All launch detection thresholds: altitude, velocity, acceleration, and time must be met for a number of consecutive samples for a launch event to be detected. This parameter dictates this number of consecutive samples. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the launch detection system's consecutive samples parameter.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the launch detection system's consecutive samples parameter.\n\n**Arguments:** *unsigned* - New value"
 						}
 					},
 					"time":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the time threshold parameter of the launch detection system. The time from when the airbrakes was armed to a possible launch event must be **above** this threshold for a launch to be detected. This value uses milliseconds as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the launch detection system's time threshold.\n\n**Arguments:** None\n### Subcommandss",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the launch detection system's time threshold.\n\n**Arguments:** *unsigned* - New value in milliseconds"
 						}
 					}
 						
 				}
 			},
 			"burnout":{
-				"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+				"description": "This directory is for the burnout detection system. The vehicle's altitude, vertical velocity, and acceleration must all meet a threshold in consecutive samples for burnout to be detected. Additionally, a minimum boost time can also be applied. The threshold values, number of consectve samples, and state transition timing are parameters that can be acessed through this directory.\n### Subcommands",
                     		"children": {
-					"properties": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"properties": "Prints all burnout detection system parameters.\n\n**Arguments:** None",
 					"altitude":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the altitude threshold parameter of the burnout detection system. The vehicle's altitude must be **above** this threshold for burnout to be detected. Altitude is measured using the barometric altimeter. This value uses meters as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the burnout detection system's altitude threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the burnout detection system's altitude threshold.\n\n**Arguments:** *float* - New value in meters"
 						}
 					},
 					"velocity":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the vertical velocity threshold parameter of the burnout detection system. The vehicle's vertical velocity must be **above** this threshold for burnout to be detected. Vertical velocity is measured by differentiating altitude readings from the altimeter. This value uses meters per second as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the burnout detection system's vertical velocity threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the burnout detection system's vertical velocity threshold.\n\n**Arguments:** *float* - New value in meters per second"
 						}
 					},
 					"acceleration":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the vertical acceleration threshold parameter of the burnout detection system. The vehicle's vertical acceleration must be **below** this threshold for burnout to be detected. Vertical acceleration is measured using accelerometer readings from the IMU. This value uses meters per second squared as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the burnout detection system's vertical acceleration threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the burnout detection system's vertical acceleration threshold.\n\n**Arguments:** *float* - New value in meters per second squared"
 						}
 					},
 					"samples":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the consecutive samples parameter of the burnout detection system. All burnout detection thresholds: altitude, velocity, acceleration, and time must be met for a number of consecutive samples for a burnout event to be detected. This parameter dictates this number of consecutive samples. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the burnout detection system's consecutive samples parameter.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the burnout detection system's consecutive samples parameter.\n\n**Arguments:** *unsigned* - New value"
 						}
 					},
 					"time":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the time threshold parameter of the burnout detection system. The time from when launch was detected to a possible burnout event must be **above** this threshold for burnout to be detected. This value uses milliseconds as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the burnout detection system's time threshold.\n\n**Arguments:** None\n### Subcommandss",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the burnout detection system's time threshold.\n\n**Arguments:** *unsigned* - New value in milliseconds"
 						}
 					}
 						
 				}
 			},
 			"apogee":{
-				"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+				"description": "This directory is for the apogee detection system. The vehicle's altitude, vertical velocity, and acceleration must all meet a threshold in consecutive samples for apogee to be detected. Additionally, a minimum coast time can also be applied. The threshold values, number of consectve samples, and state transition timing are parameters that can be acessed through this directory.\n### Subcommands",
                     		"children": {
-					"properties": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"properties": "Prints all apogee detection system parameters.\n\n**Arguments:** None",
 					"altitude":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the altitude threshold parameter of the apogee detection system. The vehicle's altitude must be **above** this threshold for apogee to be detected. Altitude is measured using the barometric altimeter. This value uses meters as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the apogee detection system's altitude threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the apogee detection system's altitude threshold.\n\n**Arguments:** *float* - New value in meters"
 						}
 					},
 					"velocity":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the vertical velocity threshold parameter of the apogee detection system. The vehicle's vertical velocity must be **below** this threshold for apogee to be detected. Vertical velocity is measured by differentiating altitude readings from the altimeter. This value uses meters per second as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the apogee detection system's vertical velocity threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the apogee detection system's vertical velocity threshold.\n\n**Arguments:** *float* - New value in meters per second"
 						}
 					},
 					"acceleration":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the vertical acceleration threshold parameter of the apogee detection system. The vehicle's vertical acceleration must be **below** this threshold for apogee to be detected. Vertical acceleration is measured using accelerometer readings from the IMU. This value uses meters per second squared as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the apogee detection system's vertical acceleration threshold.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the apogee detection system's vertical acceleration threshold.\n\n**Arguments:** *float* - New value in meters per second squared"
 						}
 					},
 					"samples":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the consecutive samples parameter of the apogee detection system. All apogee detection thresholds: altitude, velocity, acceleration, and time must be met for a number of consecutive samples for an apogee event to be detected. This parameter dictates this number of consecutive samples. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the apogee detection system's consecutive samples parameter.\n\n**Arguments:** None\n### Subcommands",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the apogee detection system's consecutive samples parameter.\n\n**Arguments:** *unsigned* - New value"
 						}
 					},
 					"time":{
-						"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+						"description": "This directory is for the time threshold parameter of the apogee detection system. The time from when launch was detected to a possible apogee event must be **above** this threshold for apogee to be detected. This value uses milliseconds as the unit. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n### Default Command\nPrints the current value of the apogee detection system's time threshold.\n\n**Arguments:** None\n### Subcommandss",
                     				"children": {
-							"set": "des\n\n**Arguments:** None"
+							"set": "Changes the value of the apogee detection system's time threshold.\n\n**Arguments:** *unsigned* - New value in milliseconds"
 						}
 					}
 						
 				}
+
 			},
 			"plan": {
-				"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+				"description": "This directory is for managing the vehicle's flight plan. The flight plan is used to provide the system knolwedge about atmospheric conditions, launch vehicle properties, and airbrake parameters. The flight plan also contains a mesh of target altitude values which the controller uses as reference durring flight. The flight plan is generated on an external machine and loaded from the SD card. The flight plan is automatically loaded from a saved file location at startup, but can be changed or reloaded here. \n### Subcommands",
                     		"children": {
-					"properties": "des\n\n**Arguments:** None",
-					"load": "des\n\n**Arguments:** None",
-					"altitude": "des\n\n**Arguments:** None",
-					"gradient": "des\n\n**Arguments:** None",
+					"properties": "Displays all of the metadata associated with the currently loaded flight plan. If no flight plan is loaded only size of the allocated storage for flight plans is listed.\n```\n>flight plan properties\nNo flight plan is loaded\n64 kB available for storage\n<\n```\nIf a flight plan fails to load because it is too large, this command can be used to see what the maximum storage space is. The maximum storage space can be increaced by changing a configuration value in the source code. If a flight plan is loaded, all of it's metadata is listed. Some metadata parameters, like the effective drag area range and mass, are used directly by the controller. Others are keped for reference, allowing you to check which values were used to produce the flight plan.\n```\n>flight plan properties\nFlight plan 'flightPath.csv':\nTarget apogee: 800.00m\nDeployment range: 0 degrees - 90.00 degrees\nEffective drag area range: 0.0025m^2 - 0.0100m^2\nDry mass: 3.00kg\nLaunch site conditions: 15.00C at 101325.00pa\nVertical velocity range: 0m/s - 150.00m/s with 64 samples\nAngle with horizontal range: 0 degrees - 90.00 degrees with 64 samples\nUsing 16 kB of available 64 kB storage\n<\n```\n\n**Description of Metadata**\n\n| Value             | Description |\n|------------------|--------|\n| Target Apogee          | The target apogee of the flight plan. To change the target apogee, a new flight plan needs to be generated and loaded with the SD card.      |\n| Deployment Range | The physical angle the airbrakes can be opend to. It is important that the actuators are configured so that their maximum deployment angle is the same as the one in the flight plan.      |\n| Effective Drag Area Range            | The lower bound of the range is the drag area of the launch vehicle when the airbrakes are fully retracted. The upper bound is the drag area when the airbrakes are extended to the maximum angle, which is the upper bound of the deployment range.      |\n| Dry Mass             | The mass of the launch vehicle and airbrakes combined.      |\n| Launch Conditions           | The temperature and pressure that were used to generate the flight plan. Small deviations in actual conditons occuring durring the time between flight plan generation and launch are acceptable.    |\n| Velocity & Angle Range             | The range of vehicle states for which a target altitude is available. This range should encompass the entire range of velocities and angles the vehicle is expected to fly at.      |\n| Size             | The size of the flight plan when loaded into the flight computer's RAM. This is not the same as the file size. This is dependent upon the number of samples in both the velocity and angle dimensions.     |\n\n It is good practice to check that the flight plan metadata is correct before a launch using this command.\n\n**Arguments:** None",
+					"load": "Tries to load the flight plan at the specified path. If the new flight plan fails to load, the previously loaded flight plan will **not** still be loaded and needs to be reloaded manually. \n\n*The filename of the flight plan is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n**Arguments:** *string* - Name of the file containing the new flight plan",
+					"altitude": "Prints the flight plan's target altitude for a given velocity and angle pair. This can be used to inspect the flight plan.\n\n**Arguments:** *float* - vertical velocity of the vehicle (m/s), *float* - angle to the horizontal of the vehicle (degrees)",
+					"gradient": "Prints the gradient of the flight plan at a given velocity and angle pair. The control algorithim uses the gradient of the flight plan, so this is available to check what values it may be seeing.\n\n**Arguments:** *float* - vertical velocity of the vehicle (m/s), *float* - angle to the horizontal of the vehicle (degrees)",
 				}
 			}
                     }
                 },
 		"controller": {
-			"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+			"description": "This directory is for the airbrakes controller. The controller commands the position of the airbrakes based on the predicted state of the vehicle. The controller relies on the flight plan, which continuously gives it a reference target altitude that it tries to approach and follow. The flight plan is designed so that the reference altitude leads to the target apogee. The controller's primary objective to drive the error between the flight plan and the current predicted altitude to zero. The controller reads the vehicle's state from the observer, a system which processes incoming sensor data in real time. The observer can be disabled using the **sim** directory to allow simulation of the controller. While active, the controller will automatically move the actuators if they are activated. This directory allows the parameters of the controller to be tuned, and for it to be manually started or stoped.\n### Subcommands",
                     	"children": {
-				"start": "des\n\n**Arguments:** None",
-				"stop": "des\n\n**Arguments:** None",
+				"start": "This command allows you to manually start the controller. The flight logic will automatically start the controller when burnout is detected, so this command is not nessesary to operate the system. It can however be usefull for testing.\n\n**Arguments:** None",
+				"stop": "This command allows you to manually stop the controller. The flight logic will automatically stop the controller when apogee is detected, so this command is not nessesary to operate the system. It can however be usefull for testing.\n\n**Arguments:** None",
 				"period":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the period parameter of the controller. The period controls the rate at which the controller recalculates what airbrake deployment is commanded. Small update periods allow fine control, but if too small the controller can overwhelm the actuators and create chopy movements.\n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the current period at which the controller updates in microseconds.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the period at which the controller updates.\n\n**Arguments:** *unsigned* - New value in microseconds"
 					}
 				},
 				"decay":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the decay parameter of the controller. The rule that the controller uses to decide the airbrake deployment is based on the idea that the error between the current and reference altitude should decay exponentially. The rate of exponential decay is configurable using this parameter. The steady state error of the controller when it's drag model is incorrect is inversly porportonal to the dacay rate, so increacing the decay rate will improve accuracy in this regard. When latency occurs, either due to the actuators or sensor processing, large decay rates induce oscilations in steady state error akin to an underdamped harmonic oscilator. It is easiest to choose an appropriate decay rate that has good performance with minimal oscilation through simulation. This directory is used to manipulate the decay rate value. **Important:** The sign of the decay rate for an exponential function must be **negative**, otherwise exponential growth will occur. You will get a warning if you try to put a positive value. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*  \n### Default Command\nPrints the current decay rate of the controller.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the decay rate of the controller. The sign of the decay rate for an exponential function must be **negative**, otherwise exponential growth will occur. You will get a warning if you try to put a positive value.\n\n**Arguments:** *float* - New value"
 					}
 				},
 				"coast":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the coast parameter of the controller. It may be desirable to stop the controller from updating just before apogee. The solution to the exponential decay problem which is used by the controller has a singularity when vertical velocity is zero. This setting will cause the controller sustain the last computed deployment once the vehicle's vertical velocity falls below a threshold. The coast velocity has units of meters per second. \n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the current coast velocity.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the coast velocity.\n\n**Arguments:** *float* - New value in meters per second"
 					}
 				}
 			}
 		},
 		"log": {
-			"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+			"description": "This directory is for the log. The log stores messages onto the SD card durring flight. Log messages can be recorded by the user or automatically through software. The flight logic automatically records all event detections and any errors it encounters. The log also records timestamps, making it possible to line up with telemetry for post flight analysis. When the airbrakes is armed, a new log is automatically created. This directory allows the user to configure and use the log.\n### Default Command\nLogs a message. The timestamp of the message is automatically added. If no log file exists, a new file is automatically created.\n\n**Arguments:** *string* - Message to be loged \n### Subcommands",
                     	"children": {
-				"new": "des\n\n**Arguments:** None",
+				"new": "Creates an empty log file. If the log file already exists it is overwritten. A new log will autoamtically be created when the system is armed.\n\n**Arguments:** None",
 				"name":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the name parameter of the log. This parameter controls the name of the SD card file where logs are saved.\n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the name of the current log file\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the name of the file used for logging. The name of the file which contains previous logs is not changed by this command. New logs are just stored in a different file.\n\n**Arguments:** None"
 					}
 				},
 				"mode":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the log's mode option. The log can be used in either recording mode or buffering mode. Recording mode immediately saves messages to the SD card. Buffering mode buffers messages in RAM before recording all of them to the SD card at once. Buffering mode eliminates the slowdowns endured by frequent SD card writes. In buffering mode, if the buffer is not flushed before powering down, the data will be lost. The flight logic auomatically switches between modes durring the appropriate stages of flight. The directory **flight buffer** is used to manage this. This directory should only be used for testing and **not** to change modes for a flight.\n\n*This option is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the mode that the log is currently in\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"buffer": "des\n\n**Arguments:** None",
-						"record": "des\n\n**Arguments:** None"
+						"buffer": "Places the log into buffering mode.\n\n**Arguments:** None",
+						"record": "Places the log into recording mode.\n\n**Arguments:** None"
 					}
 				},
 				"override":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the log's override option, which allows all logs to be blocked from being recorded. Override mode is used to extend the life of the SD card by not recording logs to it durring tests. This option should **not** be set for a real flight. No logs will be recorded with this option enabled. If this option is enabled when the system is armed, a warning will be printed.\n\n*This option is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints weather the override option is set or cleared. If it is set, logs are blocked. Otherwise, they are recorded normally.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None",
-						"clear": "des\n\n**Arguments:** None"
+						"set": "Enables the log's override option. Logs are not recorded when the option is set.\n\n**Arguments:** None",
+						"clear": "Disables the log's override option. Logs are recorded normally when the option is cleared.\n\n**Arguments:** None"
 					}
 				}
 			}
 		},
 		"telemetry": {
-			"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+			"description": "This directory is for the telemetry system. The telemetry system stores flight data in .csv format onto the SD card durring flight. All telemetry values are recorded periodically from the time the airbrakes is armed untill they are disarmed.\n\n**Table of Telemetry Values**\n\n| Value             | Description |\n|------------------|--------|\n| Flight State          | State of flight the program is in. *See the **state** command.*      |\n| Observer Output | Predicted altitude, vertical velocity, vertical acceleration, and angle to horizontal.      |\n| Sensor Readings            | Raw altimeter pressure, temperature & altitude readings. Raw IMU acceleration, orientation, rotation, & gravity readings. *See the **altimeter** and **imu** directories.*    |\n| Flight Path             | Reference altitude, error, and mesh derivatives. *See the **controller** and **flight plan** directories.*      |\n| Actuator Data           | Requested drag area and actual drag area computed from encoder position. *See the **motor** directory.*    |\n| Controller Data             | Intermideate computation values and event flags. *See the **controller** directory.*      |\n\nWhen the airbrakes is armed, a new telemetry file is automatically created. This directory allows the user to configure and use the telemetry system.\n### Subcommands",
                     	"children": {
-				"new": "des\n\n**Arguments:** None",
+				"new": "Creates a fresh telemetry file. If the telemetry file already exists it is overwritten. A new telemetry file will autoamtically be created when the system is armed.\n\n**Arguments:** None",
 				"name":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the name parameter of the telemetry system. This parameter controls the name of the SD card file where telemetry is saved.\n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the name of the current telemetry file\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the name of the file used for telemetry. The name of the file which contains previous telemetry is not changed by this command. New telemetry is just stored in a different file.\n\n**Arguments:** None"
 					}
 				},
 				"mode":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the telemetry system's mode option. The telemetry system can be used in either recording mode or buffering mode. Recording mode immediately saves telemetry to the SD card. Buffering mode buffers telemetry in RAM before recording all of it to the SD card at once. Buffering mode eliminates the slowdowns endured by frequent SD card writes. In buffering mode, if the buffer is not flushed before powering down, the data will be lost. The flight logic auomatically switches between modes durring the appropriate stages of flight. The directory **flight buffer** is used to manage this. This directory should only be used for testing and **not** to change modes for a flight.\n\n*This option is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the mode that the telemetry system is currently in\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"buffer": "des\n\n**Arguments:** None",
-						"record": "des\n\n**Arguments:** None"
+						"buffer": "Places the telemetry system into buffering mode.\n\n**Arguments:** None",
+						"record": "Places the telemetry system into recording mode.\n\n**Arguments:** None"
 					}
 				},
 				"refresh":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the refresh parameter of the telemetry system. The refresh parameter dictates the time between each telemetry update. Logging telemetry quickly is valuble to save a more detailed version of the flight. Recording telemetry too quickly can result in huge telemetry files. In recording mode, quicker recording can slow the program and in buffering mode it can overflow the buffer more quickly. \n### Default Command\nPrints the refresh time for the telemetry system.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the refresh time for the telemetry system.\n\n**Arguments:** *unisgned* - New value in milliseconds"
 					}
 				},
 				"override":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the telemetry system's override option, which allows telemetry to be blocked from being recorded. Override mode is used to extend the life of the SD card by not recording telemetry to it durring tests. This option should **not** be set for a real flight. No telemetry will be recorded with this option enabled. If this option is enabled when the system is armed, a warning will be printed and loged.\n\n*This option is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints weather the override option is set or cleared. If it is set, telemetry is blocked. Otherwise, it is recorded normally.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None",
-						"clear": "des\n\n**Arguments:** None"
+						"set": "Enables the telemetry system's override option. Telemetry is not recorded when the option is set.\n\n**Arguments:** None",
+						"clear": "Disables the telemetry system's override option. Telemetry is recorded normally when the option is cleared.\n\n**Arguments:** None"
 					}
 				}
+
 			}
 		},
 		"persistent": {
-			"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+			"description": "The persistent storage system allows program variables to persist across resets and power cycles. The persistent storage system automatically restores all system states and settings upon restart. When the program is modified, persistent variables will persist so long as none of them are added, reordered or removed. If this occurs, system defaults are restored and a startup message is printed. \n### Subcommands",
                     	"children": {
-				"save": "des\n\n**Arguments:** None",
+				"save": "Saves any modified persistent variables. This or the **safe** command must be used before powering down to save changes to persistent variables.\n\n**Arguments:** None",
 				"restore":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for restoring persistent variables. Persistent variables are automatically restored at startup but can also manually be restored using this directory.\n### Default Command\nRestores all persistent variables to their previously saved values.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"defaults": "des\n\n**Arguments:** None"
+						"defaults": "Restores all persistent variables to their default values.\n\n**Arguments:** None"
 					}
 				}
 			}
 		},
 		"sim": {
-			"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+			"description": "The sim direcotry contains the interface for operating the airbrakes in simulation mode. Simulation mode allows for the full airbrakes system to be tested in a simulated flight. Simulation mode requires an external machine to provide the simulated flight envirnoment. The current airbrakes simulation system uses a Simulink model to mimic a real flight and a python script to facilitate communication between the Simulink model, airbrakes flight computer, and the user. Simulation mode causes the observer, which is responsible for producing usable vehicle state estimations from sensor readings, to be put into simulation mode. In simulation mode, the observer ignores sensor readings and allows the simulation to override it's estimated values. The simulation system also sends simulation data to the host device while also listening for simulation data sent from the host device. If using a standard serial terminal, simulation packets, which have a characteristic **#** symbol prefixing them, will flood the terminal durring simulation. This is because the same serial port is used for the command line interface and the simulation. \n```\n>sim start\n<\n\n#4.607010 -2.100000 0.100000\n#4.683203 -1.050670 0.200000\n```\nThe airbrakes simulation bridge program filters these transmissions out, allowing the command line interface to be used durring simulation. A seperate document futher details how the simulation system works and how to use it. \n### Default Command\nPrints weather or not the simulation is running.\n\n**Arguments:** None\n### Subcommands",
                     	"children": {
-				"start": "des\n\n**Arguments:** None",
-				"stop": "des\n\n**Arguments:** None",
+				"start": "Enters simulation mode.\n\n**Arguments:** None",
+				"stop": "Exits simulation mode.\n\n**Arguments:** None",
 				"refresh":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the simulation system's refresh parameter. Simulation data is sent and decoded at the rate dictated by this value. Faster simulations are more accurate, but can strain the external simulation system. Make sure that the simulation refresh period matches on both the aribrakes and external simulation.\n\n*This parameter is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n### Default Command\nPrints the refresh time for the simulation system. \n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the refresh time for the simulation system.\n\n**Arguments:** *unsigned* - New value in milliseconds"
 					}
 				}
 			}
 		},
 		"altimeter": {
-			"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+			"description": "This directory enables interaction with the airbrakes' barometric altimeter. Based on the [ISA model](https://en.wikipedia.org/wiki/International_Standard_Atmosphere), the barometric altimeter's pressure and temperature readings can be used to detemine the vehicle's altitude. The altimeter will give different readings depending on atmospheric conditions. The ISA model allows for a nominal pressure and temperature value to be used to measure altitude relative to the position where the nominal readings were made. This process, refered to as zeroing the altimeter, can be conducted from this directory. \n### Subcommands",
                     	"children": {
-				"pressure": "des\n\n**Arguments:** None",
-				"temperature": "des\n\n**Arguments:** None",
-				"altitude": "des\n\n**Arguments:** None",
-				"zero": "des\n\n**Arguments:** None",
+				"pressure": "Measures and prints the current ambient pressure in pascals.\n\n**Arguments:** None",
+				"temperature": "Measures and prints the ambient temperature in Kelvin.\n\n**Arguments:** None",
+				"altitude": "Measures and prints the current altitude in meters.\n\n**Arguments:** None",
+				"zero": "Zeros the altimeter.\n\n*Zeroing data is persistent, meaning that it can be saved across resets and program updates. Use the **safe** command or **persistent save** command after making changes to persistent variables to save.*\n\n**Arguments:** None",
 				"init":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for initializing the altimeter. The altimeter is initialized automatically at startup, but can be re-initialized in this directory.\n### Default Command\nRe-initializes the altimeter.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"get": "des\n\n**Arguments:** None"
+						"get": "Prints weather the altimeter is initialized.\n\n**Arguments:** None"
 					}
 				},
 				"speed":{
-					"description": "des\n### Default Command\n**Arguments:** None\n### Subcommands",
+					"description": "This directory is for the SPI speed parameter for the altimeter. [SPI](https://en.wikipedia.org/wiki/Serial_Peripheral_Interface) is used to communicate with the altimeter. The SPI speed parameter controls how quickly SPI communncation runs. \n### Default Command\nPrints the current SPI speed.\n\n**Arguments:** None\n### Subcommands",
                     			"children": {
-						"set": "des\n\n**Arguments:** None"
+						"set": "Changes the SPI speed.\n\n**Arguments:** *unsigned* - New value in Hz"
 					}
 				}
 			}
