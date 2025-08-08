@@ -1,0 +1,61 @@
+function x_dot = systemDynamics(x, u, m, p0, T0)
+    g = 9.8;
+    x_dot = zeros(4,1);
+    x_dot(1) = x(3);
+    x_dot(2) = x(4);
+    x_dot(3) = 1/m * (-1/2 * densityFromAltitude(x(2), p0, T0)*u*sqrt(x(3)^2 + x(4)^2)*x(3));
+    x_dot(4) = 1/m * (-1/2 * densityFromAltitude(x(2), p0, T0)*u*sqrt(x(3)^2 + x(4)^2)*x(4) - m * g);
+end
+
+function density = densityFromAltitude(altitude, p0, T0)
+    % Constants
+    L = 0.0065;      % K/m temperature lapse rate
+    g = 9.80665;     % m/s^2 gravitational constant
+    R = 8.31446;     % J/(mol*K) Ideal gas constant
+    M = 0.0289652;   % kg/mol Molar mass of air
+    density = p0*M/(R*T0)*(1-L*altitude/T0).^(g*M/(R*L)-1);
+end
+
+function [val, terminal, dir] = stopEvent(t,y)
+    t;
+    val = y(4);
+    terminal = 1;
+    dir = 0;
+end
+
+function [t,x] = ODETimeSolution(InitialVelocity, InitialAltitude, InitialAngle, LaunchSiteTemperature, LaunchSitePressure, DragArea, DryMass)
+    MaxTime = 100;
+    [t, x] = ode45(@(t,y) systemDynamics(y, DragArea, DryMass, LaunchSitePressure, LaunchSiteTemperature), 0 : 0.125 : MaxTime, [0,InitialAltitude,InitialVelocity*cos(InitialAngle),InitialVelocity*sin(angle)], odeset('Events', @(t,y) stopEvent(t,y)));
+end
+
+function [velocities, angles, altitudes] = generateRawMeshData(NumAngles, InitialVelocity, InitialAngle, Temp, Pressure, DryMass, DragArea)
+    velocityFilVal = 0;
+    angleFillVal = 0;
+    altitudeFillVal = TargetAltitude;
+    velocities = zeros(0);
+    angles = zeros(0);
+    altitudes = zeros(0);
+    HorizontalVelocity = 0;
+    startAngle = pi/2;
+    for()
+        [t, x] = ODETimeSolution(InitialVelocity, InitialAltitude, InitialAngle, Temp, Pressure, DragArea, DryMass);
+        [~,x] = reIndex(t,x);
+        [pair, newAlt] = makeStateFormat(x);
+        newVel = pair(:,1);
+        newAng = pair(:,2);
+        velocities = concatColAndPad(velocities, newVel, velocityFilVal);
+        angles = concatColAndPad(angles, newAng, angleFillVal);
+        altitudes = concatColAndPad(altitudes, newAlt, altitudeFillVal);
+        startAngle = max(newAng);
+        HorizontalVelocity = HorizontalVelocity + HorizontalVelocityIncrement;
+    end
+end
+
+function C = concatColAndPad(A,B,val)
+    if size(A,1) < size(B,1)
+        A = [A; val*ones(size(B,1) - size(A,1), size(A,2))];
+    elseif size(B,1) < size(A,1)
+        B = [B; val*ones(size(A,1) - size(B,1), size(B,2))];
+    end
+    C = [A, B];
+end

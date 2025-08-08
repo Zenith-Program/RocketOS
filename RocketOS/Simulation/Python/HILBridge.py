@@ -77,7 +77,7 @@ stop_event = threading.Event()
 
 # === SERIAL SETUP ===
 try:
-    ser = serial.serial(SERIAL_PORT, BAUDRATE, timeout=0.1)
+    ser = serial.Serial(SERIAL_PORT, BAUDRATE, timeout=0.1)
 except Exception as e:
     print(f"[ERROR] Serial Port: {e}")
     stop_event.set()
