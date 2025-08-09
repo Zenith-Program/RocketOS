@@ -25,37 +25,126 @@ end
 
 function [t,x] = ODETimeSolution(InitialVelocity, InitialAltitude, InitialAngle, LaunchSiteTemperature, LaunchSitePressure, DragArea, DryMass)
     MaxTime = 100;
-    [t, x] = ode45(@(t,y) systemDynamics(y, DragArea, DryMass, LaunchSitePressure, LaunchSiteTemperature), 0 : 0.125 : MaxTime, [0,InitialAltitude,InitialVelocity*cos(InitialAngle),InitialVelocity*sin(angle)], odeset('Events', @(t,y) stopEvent(t,y)));
+    [t, x] = ode45(@(t,y) systemDynamics(y, DragArea, DryMass, LaunchSitePressure, LaunchSiteTemperature), 0 : 0.125 : MaxTime, [0,InitialAltitude,InitialVelocity*cos(InitialAngle),InitialVelocity*sin(InitialAngle)], odeset('Events', @(t,y) stopEvent(t,y)));
 end
 
-function [velocities, angles, altitudes] = generateRawMeshData(NumAngles, InitialVelocity, InitialAngle, Temp, Pressure, DryMass, DragArea)
-    velocityFilVal = 0;
-    angleFillVal = 0;
-    altitudeFillVal = TargetAltitude;
+function [velocities, angles, altitudes] = generateRawMeshData(NumAngles, InitialVelocity, InitialAltitude, Temp, Pressure, DryMass, DragArea)
+    velocityFilVal = InitialVelocity;
+    altitudeFillVal = InitialAltitude;
     velocities = zeros(0);
     angles = zeros(0);
     altitudes = zeros(0);
-    HorizontalVelocity = 0;
-    startAngle = pi/2;
-    for()
-        [t, x] = ODETimeSolution(InitialVelocity, InitialAltitude, InitialAngle, Temp, Pressure, DragArea, DryMass);
-        [~,x] = reIndex(t,x);
+    for(startAngle = pi/2/NumAngles : pi/2/NumAngles : pi/2)
+        angleFillVal = startAngle;
+        [~, x] = ODETimeSolution(InitialVelocity, InitialAltitude, startAngle, Temp, Pressure, DragArea, DryMass);
         [pair, newAlt] = makeStateFormat(x);
         newVel = pair(:,1);
         newAng = pair(:,2);
-        velocities = concatColAndPad(velocities, newVel, velocityFilVal);
+        velocities = concatColAndPad(velocities, newVel, velocityFilVal * sin(startAngle));
         angles = concatColAndPad(angles, newAng, angleFillVal);
         altitudes = concatColAndPad(altitudes, newAlt, altitudeFillVal);
-        startAngle = max(newAng);
-        HorizontalVelocity = HorizontalVelocity + HorizontalVelocityIncrement;
     end
+end
+
+function [VelocityAnglePair, Altitude] = makeStateFormat(x)
+    VelocityAnglePair = [x(:,4), atan(abs(x(:,4)./x(:,3)))];
+    Altitude = x(:,2);
 end
 
 function C = concatColAndPad(A,B,val)
     if size(A,1) < size(B,1)
-        A = [A; val*ones(size(B,1) - size(A,1), size(A,2))];
+        A = [val*ones(size(B,1) - size(A,1), size(A,2)); A];
     elseif size(B,1) < size(A,1)
-        B = [B; val*ones(size(A,1) - size(B,1), size(B,2))];
+        B = [val*ones(size(A,1) - size(B,1), size(B,2)); B];
     end
     C = [A, B];
 end
+function [velocities, angles, altitudes] = resampleVelocities(Velocities, Angles, Altitudes, numSamples, MaxVelocity)
+    velocities = zeros(size(Velocities,2), numSamples);
+    angles = zeros(size(Velocities,2), numSamples);
+    altitudes = zeros(size(Velocities,2), numSamples);
+    newSamples = linspace(MaxVelocity, 0, numSamples);
+    for(i=1:size(Velocities,2))
+        for(j=1:length(newSamples))
+            newVelocity = newSamples(j);
+            lastGreaterThanIndex = sum(cumprod(newVelocity<Velocities(:,i)));
+            if(lastGreaterThanIndex == 0)
+                %new sample is before first sample
+                velocities(i,j) = newVelocity;
+                angles(i,j) = Angles(1,i);
+                altitudes(i,j) = Altitudes(1,i);
+            elseif(lastGreaterThanIndex == size(Velocities,1))
+                %new sample is after last sample
+                velocities(i,j) = newVelocity;
+                angles(i,j) = Angles(size(Angles,1),i);
+                altitudes(i,j) = Altitudes(size(Altitudes,1),i);
+            else
+                %new sample is between two samples
+                thisSample = Velocities(lastGreaterThanIndex, i);
+                nextSample = Velocities(lastGreaterThanIndex+1, i);
+                velocities(i,j) = newVelocity;
+                angles(i,j) = linInterp(thisSample, Angles(lastGreaterThanIndex, i), nextSample, Angles(lastGreaterThanIndex+1, i), newVelocity);
+                altitudes(i,j) = linInterp(thisSample, Altitudes(lastGreaterThanIndex,i), nextSample, Altitudes(lastGreaterThanIndex+1, i), newVelocity);
+            end
+        end
+    end
+end
+
+function [velocities, angles, altitudes] = resampleAngles(Velocities, Angles, Altitudes, NumSamples)
+    velocities = zeros(NumSamples, size(Velocities,2));
+    angles = zeros(NumSamples, size(Velocities,2));
+    altitudes = zeros(NumSamples, size(Velocities, 2));
+    newSamples = linspace(pi/2, 0, NumSamples);
+    for(i=1:size(Velocities,2))
+        for(j=1:length(newSamples))
+            newAngle = newSamples(j);
+            lastGreaterThanIndex = sum(cumprod(newAngle<Angles(:,i)));
+            if(lastGreaterThanIndex == 0)
+                %new sample is before first sample
+                velocities(j,i) = Velocities(1,i);
+                angles(j,i) = newAngle;
+                altitudes(j,i) = Altitudes(1,i);
+            elseif(lastGreaterThanIndex == size(Velocities,1))
+                %new sample is after last sample
+                velocities(j,i) = velocities(size(Velocities, 2),i);
+                angles(j,i) = newAngle;
+                altitudes(j,i) = Altitudes(size(Altitudes,2),i);
+            else
+                %new sample is between two samples
+                thisSample = Angles(lastGreaterThanIndex, i);
+                nextSample = Angles(lastGreaterThanIndex+1, i);
+                velocities(j,i) = linInterp(thisSample, Velocities(lastGreaterThanIndex,i), nextSample, Velocities(lastGreaterThanIndex+1,i), newAngle);
+                angles(j,i) = newAngle;
+                altitudes(j,i) = linInterp(thisSample, Altitudes(lastGreaterThanIndex,i), nextSample, Altitudes(lastGreaterThanIndex+1,i), newAngle);
+            end
+        end
+    end
+
+end
+
+function y = linInterp(x1,y1,x2,y2,x)
+    if(x2-x1 == 0)
+        y = y1;
+    else
+        y = (y2-y1)/(x2-x1)*(x-x1)+y1;
+    end
+end
+
+% === Script Parameters ===
+InitialVelocity = 150; %m/s
+InitialAltitude = 100; %m
+Mass = 3; %
+AngleSamples = 50;
+LaunchSitePressure = 101325; %Pa
+LaunchSiteTemperature = 288.15; %K
+MinimumDragArea = 0.0025; %m^2
+MaximumDragArea = 0.01; %m^2
+
+[v,angle,h] = generateRawMeshData(AngleSamples, InitialVelocity, InitialAltitude, LaunchSiteTemperature, LaunchSitePressure, Mass, MaximumDragArea);
+[v1,angle1,h1] = generateRawMeshData(AngleSamples, InitialVelocity, InitialAltitude, LaunchSiteTemperature, LaunchSitePressure, Mass, MinimumDragArea);
+
+figure(1)
+clf
+hold on
+scatter3(v,angle,h);
+scatter3(v1,angle1,h1);
