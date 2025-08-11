@@ -93,10 +93,10 @@ MinimumDragArea = 0.0025; %m^2
 MaximumDragArea = 0.01; %m^2
 MinimumTargetApogee = 300;
 MaximumTargetApogee = 1100;
-ApogeeSamples = 200;
-RailVelocity = 30;
-RailAngle = 5;
-WindSpeed = 7;
+ApogeeSamples = 200; 
+RailVelocity = 30; %m/s
+RailAngle = 5; %degrees
+WindSpeed = 7; %m/s
 WindSpeedStdDev = 3;
 
 RailAngleRad = pi/2 - RailAngle * pi / 180;
