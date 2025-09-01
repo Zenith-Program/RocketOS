@@ -3,6 +3,6 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
-Simulation/Python/HILBridge.cfg
-Simulation/Simulink/slprj/
-Simulation/Simulink/HILSimulation.slxc
+Tools/Python/HILBridge.cfg
+Tools/MATLAB/slprj/
+Tools/MATLAB/HILSimulation.slxc
