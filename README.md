@@ -1,39 +1,42 @@
-# NASA Student Launch Payload – Teensy 4.1 Flight Software
+# 2024 - 2025 Airbrakes Project
 
-This repository contains the embedded flight software for the FAMU-FSU College of Engineering's **2024-2025 NASA Student Launch Competition** payload experiment. The project was developed using [PlatformIO](https://platformio.org/) and written for the **Teensy 4.1** microcontroller. It encompasses flight tracking algorithims, sensor integration, data logging, VHF APRS messaging, software in the loop testing, and a command line interface.
-
-## Overview
-
-- **Target Platform**: Teensy 4.1 (ARM Cortex-M7)
-- **Environment**: PlatformIO (with Arduino framework)
-- **Purpose**: Autonomous flight payload built for the 2024-2025 [USLI](https://www.nasa.gov/stem/studentlaunch/home/index.html) competition.
-
-> This repository was developed by [Nathan Hardie](https://github.com/Nate-4-4) as a member of the Zenith Program at Florida State University for participation in the NASA Student Launch Initiative.
-
----
+This repository contains the software used for the airbrakes project. The airbrakes project was an initiative within the Zenith Program at Florida State University to develop a drag-based apogee control system for high power rockets. This repo contains the embeded flight software, hardware in the loop simulation system, and other tools used durring the project. 
 
 ## Repository Structure
 
 ```bash
-.
-├── include/            # Header files
-├── lib/                # External libraries - Adafurit BNO055, Adafruit BNO080, Uravu LabsMS5607
-├── src/                # Source code
-│   ├── main.cpp        # Main entry point
-│   └── ...             # Other modules
-├── platformio.ini      # PlatformIO configuration (incorporates BNO055 lib using PIO library manager)
-└── README.md           # You're here
+
+├── include/                    # Header files
+│   ├── airbrakes/              # Airbrakes specific header files
+│   └── ...                     # RocketOS generic flight software header files
+├── src/                        # Source code
+│   ├── RocketOSfilename.cpp    # RocketOS generic flight software source files
+│   ├── Airbrakesfilename.cpp   # Airbrakes specific source files
+│   └── main.cpp                # Flight software entry point
+├── Tools/                      # HIL simulation system and other supporting tools
+│   ├── MATLAB/                 # HIL Simulink model & supporting tools
+│   └── Python/                 # HIL CLI
+├── Docs/                       # System documentation
+├── platformio.ini              # PlatformIO configuration
+└── README.md                   # You're here
 ```
 
+## Flight Software Overview
+
+- **Target Platform**: Teensy 4.1 (ARM Cortex-M7)
+- **Language**: C++
+- **Environment**: PlatformIO (with Arduino framework)
+- **Purpose**: Autonomous flight payload built for the 2024-2025 [USLI](https://www.nasa.gov/stem/studentlaunch/home/index.html) competition.
+
 ## Required Hardware
-The payload system relies on external hardware: 
-- **MS5706 Barometric Altimeter**: Connected to Teensy 4.1's I2C bus #1. It an be found [here](https://www.parallax.com/product/altimeter-module-ms5607/). Library implementation found [here](https://github.com/UravuLabs/MS5607).
-- **BNO055 IMU**: Connected to Teensy 4.1's I2C bus #2. It can be found [here](https://www.adafruit.com/product/2472). Library implementation found [here](https://github.com/adafruit/Adafruit_BNO055).
-- **BNO080 IMU**: Four of these (one per STEMnaut) are used. Two on I2C bus #2 and one on I2C bus #1. It can be found [here](https://www.ceva-ip.com/product/fsm-9-axis-module/). Library implementation found [here](https://github.com/adafruit/Adafruit_BNO08x).
-- **LightAPRS Transmitter Module**: Used as a secondary altimeter, battery monitor, GPS (not fully implemented), and VHF transmitter. Connected to Teensy 4.1's I2C bus #3. It can be found [here](https://www.qrp-labs.com/lightaprs.html).
+The airbrakes flight computer consists of other modules besides teensy 4.1: 
+- **MS5706 Barometric Altimeter**: Connected to Teensy 4.1's SPI0. Purchased from [Paralax Inc](https://www.parallax.com/product/altimeter-module-ms5607/).
+- **BNO085 IMU**: Connected to Teensy 4.1's SPI1. Purchased from [Adafruit Industries](https://www.adafruit.com/product/4754).
+- **MP6500 Stepper Motor Driver**: Look at [source code](RocketOS\src\AirbrakesActuator.cpp) to determine pinouts. Purchased from [Pololu](https://www.pololu.com/product/2968).
+- **STP-LE17-2A06ADJ**: Stepper motor that drives the airbrakes. Purchased from [Automation Driect](https://www.automationdirect.com/adc/shopping/catalog/motion_control/stepper_motor_linear_actuators/stepper_motor_linear_actuators/stp-le17-2a06adj)
 
 # Future Teams' Reference
-The PayloadOS program can run with just a Teensy 4.1 board with limited functionality. If you are looking for example code to get started with or use as reference, I'd reccomend you look at the [RocketOS](https://github.com/Zenith-Program/RocketOS) repository instead. It contains source code, tools, and better documentation for the airbrakes system, which in many ways is a refined version of the payload system. 
+The airbrakes module is most likely still in the 2024-2025 subscale vehicle. To interact with it, follow the *usage guide* and the [command line interface reference manual](RocketOS\Docs\Airbrakes Command Reference.html). The airbrakes flight software is in very good condition and contains several modules that were designed to be easily reused by future systems. These are the [Shell](RocketOS\include\shell), [Persistent](RocketOS\include\persistent), [telemetry](RocketOS\include\telemetry), [simulation](RocketOS\include\simulation), and [processing](RocketOS\include\processing). Other systems, such as the hardware implementations for the [MS5607](RocketOS\src\AirbrakesSensors_Altimeter.cpp), [BNO085](RocketOS\src\AirbrakesSensors_IMU.cpp) and [MP6500](RocketOS\src\AirbrakesActuator.cpp) can likely be incorporated with minimal effort. If you have any questions, use the contact info in the Teams: *ZenithProgram\4. 24-25 Documentation\7. Airbrakes Project\4. Contact Info*.
 
 
 
