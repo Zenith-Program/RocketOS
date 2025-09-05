@@ -203,16 +203,16 @@ minAltitudes = altitudeVelocity(velocities, point, k);
 maxAltitudes = altitudeVelocity(velocities, point, kMax);
 
 hold on
-plot(velocities, maxAltitudes, '--k')
-plot(velocities, minAltitudes, '-.k')
+plot(velocities, maxAltitudes, '-.k')
+plot(velocities, minAltitudes, '--k')
 hold off
 
 ylim([0 1000])
 xlim([0 150])
 formatIEEE();
-title("An Example Point's Past and Future Cones")
+title("Example Past Cone")
 xlabel("Velocity (m/s)", 'FontSize', 9, 'FontName', 'Times New Roman')
 ylabel("Altitude (m)", 'FontSize', 9, 'FontName', 'Times New Roman')
-legend("Lower Bound (F^- or P^-)", "Upper Bound (F^+ or P^+)", 'Location', 'northeast', 'FontSize', 8)
+legend("Upper Bound F^+", "LowerBound F^-", 'Location', 'northeast', 'FontSize', 8)
 
 
