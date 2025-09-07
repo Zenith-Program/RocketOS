@@ -2,13 +2,6 @@
 
 The Airbrakes Project was an initiative within the Zenith Program, a rocketry club at Florida State University, to develop a drag-based apogee control system for high power rockets. Throughout the project, the Airbrakes team developed control algorithims, wrote flight software, constructed control surfaces with supporting electronics, overhauled an existing recovery system, and integrated all components into a complete system. This repository contains the source code for the flight software, hardware in the loop simulation, and supporting tools used for the 2024-2025 Airbrakes Project. Additionally, documentation for some airbrakes systems is provided for future teams' reference. 
 
-## Media
-
-![alt text](RocketOS/Docs/Images/Rocket.jpeg "Avionics/Recovery Module")
-![alt text](RocketOS/Docs/Images/Airbrakes.jpeg "Airbrakes Module")
-![alt text](RocketOS/Docs/Images/Avionics.jpeg "Avionics/Recovery Module")
-![alt text](RocketOS/Docs/Images/HardwareInTheLoop.png "Hardware in the Loop Simulation")
-
 ## Repository Structure
 
 ```bash
@@ -42,6 +35,17 @@ The airbrakes flight computer consists of other modules besides teensy 4.1:
 
 ## Future Teams' Reference
 The airbrakes module is most likely still in the 2024-2025 subscale vehicle. To interact with it, follow the usage guide and the command line interface reference manual, both of which are located in the [Docs](RocketOS/Docs) folder. The airbrakes flight software is in very good condition and contains several modules that were designed to be easily reused by future systems. These are the [Shell](RocketOS/include/shell), [Persistent](RocketOS/include/persistent), [Telemetry](RocketOS/include/telemetry), [Simulation](RocketOS/include/simulation), and [Processing](RocketOS/include/processing). Other systems, such as the hardware implementations for the [MS5607](RocketOS/src/AirbrakesSensors_Altimeter.cpp), [BNO085](RocketOS/src/AirbrakesSensors_IMU.cpp) and [MP6500](RocketOS/src/AirbrakesActuator.cpp) can likely be incorporated with minimal effort. If you have any questions, use the contact info in the Teams: *ZenithProgram\4. 24-25 Documentation\7. Airbrakes Project\4. Contact Info*.
+
+## Media
+
+### Airbrakes Demonstration Vehicle
+![alt text](RocketOS/Docs/Images/Rocket.jpeg "Image of the Airbrakes Rocket")
+### Airbrakes Module
+![alt text](RocketOS/Docs/Images/Airbrakes.jpeg "Image of the Airbrakes Module")
+### Avionics Bay
+![alt text](RocketOS/Docs/Images/Avionics.jpeg "Image of the Avionics/Recovery Module")
+### Hardware in the Loop Simulation
+![alt text](RocketOS/Docs/Images/HardwareInTheLoop.png "Image of the Hardware in the Loop Simulation")
 
 
 
