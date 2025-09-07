@@ -39,7 +39,7 @@ The airbrakes module is most likely still in the 2024-2025 subscale vehicle. To 
 ## Media
 
 ### Airbrakes Demonstration Vehicle
-![alt text](RocketOS/Docs/Images/Rocket.jpeg "Image of the Airbrakes Rocket")
+![alt text](RocketOS/Docs/Images/Rocket2.jpeg "Image of the Airbrakes Rocket")
 ### Airbrakes Module
 ![alt text](RocketOS/Docs/Images/Airbrakes.jpeg "Image of the Airbrakes Module")
 ### Avionics Bay
