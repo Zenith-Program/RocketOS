@@ -4,10 +4,10 @@ The Airbrakes Project was an initiative within the Zenith Program, a rocketry cl
 
 ## Media
 
-![alt text](RocketOS/Docs/Images/Rocket.jpeg Avionics/Recovery Module)
-![alt text](RocketOS/Docs/Images/Airbrakes.jpeg Airbrakes Module)
-![alt text](RocketOS/Docs/Images/Avionics.jpeg Avionics/Recovery Module)
-![alt text](RocketOS/Docs/Images/HardwareInTheLoop.png Hardware in the Loop Simulation)
+![alt text](RocketOS/Docs/Images/Rocket.jpeg "Avionics/Recovery Module")
+![alt text](RocketOS/Docs/Images/Airbrakes.jpeg "Airbrakes Module")
+![alt text](RocketOS/Docs/Images/Avionics.jpeg "Avionics/Recovery Module")
+![alt text](RocketOS/Docs/Images/HardwareInTheLoop.png "Hardware in the Loop Simulation")
 
 ## Repository Structure
 
