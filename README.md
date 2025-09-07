@@ -1,6 +1,13 @@
 # 2024 - 2025 Airbrakes Project
 
-The Airbrakes Project was an initiative within the Zenith Program, a rocketry club at Florida State University, to develop a drag-based apogee control system for high power rockets. Throughout the project, the Airbrakes team developed control algorithims, wrote the full flight software stack, constructed control surfaces with supporting electronics, overhauled an existing recovery system, and integrated the all components into a flight worthy system. This repository contains the source code for the flight software, hardware in the loop simulation, and supporting tools used for the 2024-2025 Airbrakes Project. Additionally, documentation for some airbrakes systems is provided for future teams' reference. 
+The Airbrakes Project was an initiative within the Zenith Program, a rocketry club at Florida State University, to develop a drag-based apogee control system for high power rockets. Throughout the project, the Airbrakes team developed control algorithims, wrote flight software, constructed control surfaces with supporting electronics, overhauled an existing recovery system, and integrated all components into a complete system. This repository contains the source code for the flight software, hardware in the loop simulation, and supporting tools used for the 2024-2025 Airbrakes Project. Additionally, documentation for some airbrakes systems is provided for future teams' reference. 
+
+## Media
+
+[alt text](RocketOS/Docs/Images/Rocket.jpeg Avionics/Recovery Module)
+[alt text](RocketOS/Docs/Images/Airbrakes.jpeg Airbrakes Module)
+[alt text](RocketOS/Docs/Images/Avionics.jpeg Avionics/Recovery Module)
+[alt text](RocketOS/Docs/Images/HardwareInTheLoop.png Avionics/Recovery Module)
 
 ## Repository Structure
 
